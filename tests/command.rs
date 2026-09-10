@@ -1,4 +1,187 @@
-use std::{fs, process::Command};
+use std::{
+    fs,
+    io::Write,
+    process::{Command, Output, Stdio},
+};
+
+fn input(root: &std::path::Path, arguments: &[&str], source: &[u8]) -> Output {
+    let mut child = Command::new(env!("CARGO_BIN_EXE_breathers"))
+        .current_dir(root)
+        .args(arguments)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    child.stdin.take().unwrap().write_all(source).unwrap();
+
+    child.wait_with_output().unwrap()
+}
+
+#[test]
+fn formats_standard_input_without_writing_files() {
+    let root = std::env::temp_dir()
+        .join("breathers")
+        .join(std::process::id().to_string())
+        .join(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+                .to_string(),
+        );
+
+    fs::create_dir_all(&root).unwrap();
+    let untouched = "local value = 1\nreturn value\n";
+    fs::write(root.join("untouched.luau"), untouched).unwrap();
+
+    fs::write(
+        root.join("breathers.toml"),
+        "include = []\nexclude = [\"**\"]\n",
+    )
+    .unwrap();
+
+    for (language, source) in [
+        ("rust", "fn example() {\n    work();\n    return 1;\n}\n"),
+        ("lua", "local value = 1\nreturn value\n"),
+        ("luau", "local value: number = 1\nreturn value\n"),
+        ("c", "int example(void) {\n    work();\n    return 1;\n}\n"),
+        ("c++", "int example() {\n    work();\n    return 1;\n}\n"),
+        ("python", "def example():\n    work()\n    return 1\n"),
+        (
+            "javascript",
+            "function example() {\n    work();\n    return 1;\n}\n",
+        ),
+        (
+            "typescript",
+            "function example(): number {\n    work();\n    return 1;\n}\n",
+        ),
+        (
+            "tsx",
+            "function example() {\n    work();\n    return <div />;\n}\n",
+        ),
+    ] {
+        let expected = source
+            .replace("\n    return", "\n\n    return")
+            .replace("\nreturn", "\n\nreturn");
+
+        for (source, expected) in [
+            (source.to_owned(), expected.clone()),
+            (source.replace('\n', "\r\n"), expected.replace('\n', "\r\n")),
+            (
+                source.trim_end_matches('\n').to_owned(),
+                expected.trim_end_matches('\n').to_owned(),
+            ),
+        ] {
+            let output = input(&root, &["-l", language, "-"], source.as_bytes());
+
+            assert!(
+                output.status.success(),
+                "{language}: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+
+            assert_eq!(output.stdout, expected.as_bytes(), "{language}");
+            assert_eq!(output.stderr, Vec::<u8>::new());
+        }
+    }
+
+    let output = input(&root, &["-l", "luau", "-"], b"");
+    assert!(output.status.success());
+    assert_eq!(output.stdout, Vec::<u8>::new());
+    fs::write(root.join("settings.toml"), "[luau]\nreturns = false\n").unwrap();
+
+    let output = input(
+        &root,
+        &["--language", "luau", "--config", "settings.toml", "-"],
+        untouched.as_bytes(),
+    );
+
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert_eq!(output.stdout, untouched.as_bytes());
+    fs::write(root.join("breathers.toml"), "[luau]\nrelated = true\n").unwrap();
+    let output = input(&root, &["-l", "luau", "-"], untouched.as_bytes());
+    assert!(output.status.success());
+    assert_eq!(output.stdout, untouched.as_bytes());
+
+    assert_eq!(
+        fs::read_to_string(root.join("untouched.luau")).unwrap(),
+        untouched
+    );
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn rejects_invalid_standard_input_without_output_or_file_changes() {
+    let root = std::env::temp_dir()
+        .join("breathers")
+        .join(std::process::id().to_string())
+        .join(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+                .to_string(),
+        );
+
+    fs::create_dir_all(&root).unwrap();
+    let source = "local value = 1\nreturn value\n";
+    fs::write(root.join("untouched.luau"), source).unwrap();
+    fs::write(root.join("breathers.toml"), "").unwrap();
+
+    for (arguments, message) in [
+        (vec!["-"], "Stdin requires --language"),
+        (
+            vec!["-l", "luau", "-", "untouched.luau"],
+            "must be the only input path",
+        ),
+        (vec!["-l", "luau", "-", "-"], "must be the only input path"),
+    ] {
+        let output = Command::new(env!("CARGO_BIN_EXE_breathers"))
+            .current_dir(&root)
+            .args(arguments)
+            .output()
+            .unwrap();
+
+        assert!(!output.status.success());
+        assert_eq!(output.stdout, Vec::<u8>::new());
+        assert!(String::from_utf8_lossy(&output.stderr).contains(message));
+    }
+
+    for source in [b"local broken = {".as_slice(), &[0xff]] {
+        let output = input(&root, &["-l", "luau", "-"], source);
+        assert!(!output.status.success());
+        assert_eq!(output.stdout, Vec::<u8>::new());
+        assert!(String::from_utf8_lossy(&output.stderr).contains("stdin:"));
+    }
+
+    for configuration in ["[luau]\nunknown = true\n", "include = [\"[\"]\n"] {
+        fs::write(root.join("breathers.toml"), configuration).unwrap();
+
+        let output = Command::new(env!("CARGO_BIN_EXE_breathers"))
+            .current_dir(&root)
+            .args(["-l", "luau", "-"])
+            .output()
+            .unwrap();
+
+        assert!(!output.status.success());
+        assert_eq!(output.stdout, Vec::<u8>::new());
+    }
+
+    assert_eq!(
+        fs::read_to_string(root.join("untouched.luau")).unwrap(),
+        source
+    );
+
+    fs::remove_dir_all(root).unwrap();
+}
 
 #[test]
 fn discovers_new_languages_and_loads_configuration_before_writing() {

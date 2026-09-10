@@ -54,6 +54,16 @@ Explicit files with unknown extensions require a language. Directory searches se
 
 Use `breathers --help` for help.
 
+### Standard input
+
+Use `-` as the only input path and specify `--language` / `-l`:
+
+```sh
+breathers -l luau -
+```
+
+Reads UTF-8 source from stdin and writes formatted source to stdout without editing files. Diagnostics go to stderr. Configuration loading and spacing rules apply as usual. Include/exclude globs are validated but do not filter stdin. Line endings and the presence or absence of a final newline are preserved.
+
 ## Configuration
 
 Project configuration comes from the nearest `breathers.toml`, searching the current working directory and then its ancestors. Select a different project configuration with `-c` / `--config`:

@@ -1,6 +1,7 @@
 use std::{
     collections::BTreeSet,
     fs,
+    io::{self, Write},
     path::{Path, PathBuf},
     process::ExitCode,
 };
@@ -102,11 +103,16 @@ impl Language {
 struct Arguments {
     #[arg(
         default_value = ".",
-        help = "Source files or directories to format recursively"
+        help = "Source files or directories to format recursively, or - for stdin"
     )]
     paths: Vec<PathBuf>,
 
-    #[arg(short, long, value_enum, help = "Override language detection")]
+    #[arg(
+        short,
+        long,
+        value_enum,
+        help = "Override language detection; required for stdin"
+    )]
     language: Option<Language>,
 
     #[arg(short, long, help = "Read configuration from this TOML file")]
@@ -177,8 +183,34 @@ fn run() -> Result<(), String> {
         return Ok(());
     }
 
+    let input_language = if arguments.paths.iter().any(|path| path.as_os_str() == "-") {
+        if arguments.paths.len() != 1 {
+            return Err("Stdin (-) must be the only input path".into());
+        }
+
+        Some(arguments.language.ok_or("Stdin requires --language (-l)")?)
+    } else {
+        None
+    };
+
     let (configuration, root) = configuration::Configuration::load(arguments.config.as_deref())?;
     let selection = configuration::Selection::new(&configuration, root)?;
+
+    if let Some(language) = input_language {
+        let source =
+            io::read_to_string(io::stdin().lock()).map_err(|error| format!("stdin: {error}"))?;
+
+        let formatted = language
+            .breathe(&source, &configuration)
+            .map_err(|error| format!("stdin: {error}"))?;
+
+        let mut output = io::stdout().lock();
+
+        return output
+            .write_all(formatted.as_bytes())
+            .and_then(|()| output.flush())
+            .map_err(|error| format!("stdout: {error}"));
+    }
 
     let mut files = BTreeSet::new();
     let mut directories = BTreeSet::new();
