@@ -38,6 +38,7 @@ breathers src/main.rs src/main.luau
 | C                | `.c`, `.h`                                                               |
 | C++              | `.cpp`, `.cc`, `.cxx`, `.c++`, `.hpp`, `.hh`, `.hxx`, `.h++`, `.C`, `.H` |
 | Python           | `.py`, `.pyi`                                                            |
+| Nushell          | `.nu`                                                                    |
 | JavaScript / JSX | `.js`, `.jsx`, `.mjs`, `.cjs`                                            |
 | TypeScript / TSX | `.ts`, `.mts`, `.cts`, `.tsx`                                            |
 

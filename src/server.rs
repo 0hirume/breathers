@@ -40,6 +40,7 @@ fn language(identifier: &str, uri: &Uri) -> Option<Language> {
         "c" => Some(Language::C),
         "cpp" | "c++" => Some(Language::CPlusPlus),
         "python" => Some(Language::Python),
+        "nu" | "nushell" => Some(Language::Nushell),
         "javascript" | "javascriptreact" | "jsx" => Some(Language::Javascript),
         "typescript" => Some(Language::Typescript),
         "typescriptreact" | "tsx" => Some(Language::Tsx),

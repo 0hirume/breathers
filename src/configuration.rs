@@ -28,6 +28,8 @@ pub enum Rule {
     WhileLoops,
     RepeatLoops,
     LoopExpressions,
+    LoopStatements,
+    Modules,
     DoBlocks,
     BlockExpressions,
     Matches,
@@ -39,6 +41,7 @@ pub enum Rule {
     Classes,
     Interfaces,
     Calls,
+    Pipelines,
     Arrays,
     Tables,
     Objects,
@@ -54,6 +57,7 @@ pub enum Rule {
     TypeMembers,
     ObjectProperties,
     DictionaryEntries,
+    RecordFields,
     MatchArms,
     MatchCases,
     SwitchCases,
@@ -86,6 +90,8 @@ impl Rule {
             Self::WhileLoops => "Separate while loops.",
             Self::RepeatLoops => "Separate repeat-until loops.",
             Self::LoopExpressions => "Separate Rust loop expressions.",
+            Self::LoopStatements => "Separate Nushell loop statements.",
+            Self::Modules => "Separate Nushell module and export-env declarations.",
             Self::DoBlocks => "Separate do blocks and do-while loops where supported.",
             Self::BlockExpressions => "Separate Rust block expressions.",
             Self::Matches => "Separate match statements and expressions.",
@@ -97,9 +103,10 @@ impl Rule {
             Self::Classes => "Separate class declarations.",
             Self::Interfaces => "Separate TypeScript interface declarations.",
             Self::Calls => "Separate multiline call expressions.",
+            Self::Pipelines => "Separate multiline Nushell pipelines.",
             Self::Arrays => "Separate multiline array and sequence expressions.",
-            Self::Tables => "Separate multiline Lua and Luau table expressions.",
-            Self::Objects => "Separate multiline object and dictionary expressions.",
+            Self::Tables => "Separate multiline Lua, Luau, and Nushell table expressions.",
+            Self::Objects => "Separate multiline object, dictionary, and record expressions.",
 
             Self::Declarations => {
                 "Separate multiline declarations not classified as calls, collections, or type aliases."
@@ -124,7 +131,8 @@ impl Rule {
             }
 
             Self::DictionaryEntries => "Separate multiline Python dictionary entries.",
-            Self::MatchArms => "Separate multiline Rust match arms.",
+            Self::RecordFields => "Separate multiline Nushell record fields.",
+            Self::MatchArms => "Separate multiline Rust and Nushell match arms.",
             Self::MatchCases => "Separate multiline Python match cases.",
             Self::SwitchCases => "Separate multiline switch cases.",
             Self::EnumVariants => "Separate multiline Rust enum variants.",
@@ -147,6 +155,8 @@ impl Rule {
             | Self::WhileLoops
             | Self::RepeatLoops
             | Self::LoopExpressions
+            | Self::LoopStatements
+            | Self::Modules
             | Self::DoBlocks
             | Self::BlockExpressions
             | Self::Matches
@@ -159,6 +169,7 @@ impl Rule {
             | Self::Interfaces => Some(Self::Blocks),
 
             Self::Calls
+            | Self::Pipelines
             | Self::Arrays
             | Self::Tables
             | Self::Objects
@@ -175,7 +186,8 @@ impl Rule {
             | Self::InterfaceMembers
             | Self::TypeMembers
             | Self::ObjectProperties
-            | Self::DictionaryEntries => Some(Self::Fields),
+            | Self::DictionaryEntries
+            | Self::RecordFields => Some(Self::Fields),
 
             Self::MatchArms | Self::MatchCases | Self::SwitchCases => Some(Self::Arms),
             Self::EnumVariants | Self::EnumMembers => Some(Self::Variants),
@@ -315,6 +327,27 @@ language!(
     EnumMembers
 );
 language!(
+    Nushell,
+    nushell,
+    Conditionals,
+    ForLoops,
+    WhileLoops,
+    LoopStatements,
+    Matches,
+    TryBlocks,
+    Functions,
+    Modules,
+    Calls,
+    Pipelines,
+    Arrays,
+    Tables,
+    Objects,
+    Declarations,
+    ReturnStatements,
+    RecordFields,
+    MatchArms
+);
+language!(
     Python,
     python,
     Conditionals,
@@ -432,6 +465,13 @@ pub struct Configuration {
     )]
     pub cplusplus: Rules,
 
+    #[serde(deserialize_with = "nushell")]
+    #[schemars(
+        with = "BTreeMap<Nushell, bool>",
+        description = "Nushell spacing rules. Default: inherit global settings, then built-in defaults."
+    )]
+    pub nushell: Rules,
+
     #[serde(deserialize_with = "python")]
     #[schemars(
         with = "BTreeMap<Python, bool>",
@@ -526,6 +566,7 @@ impl Configuration {
         self.luau.0.extend(project.luau.0);
         self.c.0.extend(project.c.0);
         self.cplusplus.0.extend(project.cplusplus.0);
+        self.nushell.0.extend(project.nushell.0);
         self.python.0.extend(project.python.0);
         self.javascript.0.extend(project.javascript.0);
         self.typescript.0.extend(project.typescript.0);

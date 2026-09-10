@@ -50,6 +50,12 @@ fn bindings<'source>(
             names.insert(&source[node.byte_range()]);
         }
 
+        "val_variable" => {
+            if let Some(name) = node.child_by_field_name("name") {
+                bindings(name, source, names);
+            }
+        }
+
         "pair_pattern" => {
             if let Some(value) = node.child_by_field_name("value") {
                 bindings(value, source, names);
@@ -120,7 +126,7 @@ fn written<'source>(
     names: &mut std::collections::BTreeSet<&'source str>,
 ) {
     let field = match node.kind() {
-        "variable_declarator" => Some("name"),
+        "variable_declarator" | "stmt_let" | "stmt_mut" | "stmt_const" => Some("name"),
         "init_declarator" => Some("declarator"),
 
         "assignment"
@@ -132,12 +138,21 @@ fn written<'source>(
         _ => None,
     };
 
-    if let Some(target) = field.and_then(|field| node.child_by_field_name(field)) {
+    if let Some(target) = field
+        .and_then(|field| node.child_by_field_name(field))
+        .or_else(|| {
+            (node.kind() == "assignment")
+                .then(|| node.child_by_field_name("lhs"))
+                .flatten()
+        })
+    {
         bindings(target, source, names);
 
         if let Some(right) = node.child_by_field_name("right") {
             written(right, source, names);
         }
+    } else if matches!(node.kind(), "pipeline" | "pipe_element") && node.named_child_count() == 1 {
+        written(node.named_child(0).unwrap(), source, names);
     } else if node.kind() == "declaration" {
         let mut cursor = node.walk();
 
@@ -170,6 +185,8 @@ fn written<'source>(
 fn target_reads(node: Node<'_>, source: &str, names: &std::collections::BTreeSet<&str>) -> bool {
     match node.kind() {
         "identifier" | "shorthand_property_identifier_pattern" => false,
+
+        "val_variable" => node.named_child_count() > 1 && reads(node, source, names),
 
         "member_expression"
         | "attribute"
@@ -233,6 +250,15 @@ fn opaque_reference(node: Node<'_>) -> bool {
             | "import_statement"
             | "import_from_statement"
             | "type_definition"
+            | "val_string"
+            | "val_closure"
+            | "decl_def"
+            | "decl_extern"
+            | "decl_module"
+            | "decl_export"
+            | "decl_alias"
+            | "decl_use"
+            | "cell_path"
     ) || node.kind().starts_with("preproc_")
 }
 
@@ -284,6 +310,21 @@ fn reads(node: Node<'_>, source: &str, names: &std::collections::BTreeSet<&str>)
             names.contains(&source[node.byte_range()])
         }
 
+        "val_variable" => node
+            .child_by_field_name("name")
+            .is_some_and(|name| names.contains(&source[name.byte_range()])),
+
+        "ctrl_if" | "ctrl_while" => field("condition"),
+        "ctrl_for" => field("iterable"),
+        "ctrl_match" => field("scrutinee"),
+
+        "record_entry" => {
+            field("value")
+                || node
+                    .child_by_field_name("key")
+                    .is_some_and(|key| key.kind() != "identifier" && reads(key, source, names))
+        }
+
         "string" => {
             let mut cursor = node.walk();
 
@@ -317,17 +358,29 @@ fn reads(node: Node<'_>, source: &str, names: &std::collections::BTreeSet<&str>)
                 || (node.child(0).is_some_and(|child| child.kind() == "[") && field("name"))
         }
 
-        "keyword_argument" | "variable_declarator" | "init_declarator" => field("value"),
+        "keyword_argument"
+        | "variable_declarator"
+        | "init_declarator"
+        | "stmt_let"
+        | "stmt_mut"
+        | "stmt_const"
+        | "env_var" => field("value"),
 
         "assignment" | "assignment_expression" => {
-            field("right")
+            let (left, right, operator) = if node.child_by_field_name("lhs").is_some() {
+                ("lhs", "rhs", "opr")
+            } else {
+                ("left", "right", "operator")
+            };
+
+            field(right)
                 || node
-                    .child_by_field_name("left")
+                    .child_by_field_name(left)
                     .is_some_and(|left| target_reads(left, source, names))
                 || (node
-                    .child_by_field_name("operator")
+                    .child_by_field_name(operator)
                     .is_some_and(|operator| &source[operator.byte_range()] != "=")
-                    && field("left"))
+                    && field(left))
         }
 
         "augmented_assignment" | "augmented_assignment_expression" => {

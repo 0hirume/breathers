@@ -86,6 +86,50 @@ fn protocol(
 }
 
 #[test]
+fn serves_nushell_formatting() {
+    use serde_json::json;
+
+    let root = std::env::temp_dir().join(format!(
+        "breathers-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+
+    fs::create_dir(&root).unwrap();
+    fs::write(root.join("breathers.toml"), "").unwrap();
+    let source = "print ready\nreturn done\n";
+
+    for language in ["nu", "nushell"] {
+        let responses = protocol(
+            &root,
+            &["--lsp"],
+            &[
+                json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"capabilities":{}}}),
+                json!({"jsonrpc":"2.0","method":"initialized","params":{}}),
+                json!({"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"untitled:example","languageId":language,"version":1,"text":source}}}),
+                json!({"jsonrpc":"2.0","id":2,"method":"textDocument/formatting","params":{"textDocument":{"uri":"untitled:example"},"options":{"tabSize":4,"insertSpaces":true}}}),
+                json!({"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"untitled:example","version":2},"contentChanges":[{"text":"def broken [] {"}]}}),
+                json!({"jsonrpc":"2.0","id":3,"method":"textDocument/formatting","params":{"textDocument":{"uri":"untitled:example"},"options":{"tabSize":4,"insertSpaces":true}}}),
+                json!({"jsonrpc":"2.0","id":4,"method":"shutdown"}),
+                json!({"jsonrpc":"2.0","method":"exit"}),
+            ],
+        );
+
+        assert_eq!(
+            responses[&2]["result"][0]["newText"],
+            "print ready\n\nreturn done\n"
+        );
+
+        assert!(responses[&3].get("error").is_some());
+    }
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn serves_document_formatting_with_buffer_synchronization() {
     use serde_json::json;
     use tower_lsp_server::ls_types::Uri;
@@ -311,6 +355,10 @@ fn formats_standard_input_without_writing_files() {
         ("c++", "int example() {\n    work();\n    return 1;\n}\n"),
         ("python", "def example():\n    work()\n    return 1\n"),
         (
+            "nushell",
+            "def example [] {\n    print ready\n    return 1\n}\n",
+        ),
+        (
             "javascript",
             "function example() {\n    work();\n    return 1;\n}\n",
         ),
@@ -460,6 +508,10 @@ fn discovers_new_languages_and_loads_configuration_before_writing() {
     let sources = [
         ("example.py", "def example():\n    work()\n    return 1\n"),
         (
+            "example.nu",
+            "def example [] {\n    print ready\n    return 1\n}\n",
+        ),
+        (
             "example.js",
             "function example() {\n    work();\n    return 1;\n}\n",
         ),
@@ -483,7 +535,7 @@ fn discovers_new_languages_and_loads_configuration_before_writing() {
 
     fs::write(
         root.join("breathers.toml"),
-        "[python]\nreturns = false\n[typescript]\nreturns = false\n",
+        "[python]\nreturns = false\n[typescript]\nreturns = false\n[nushell]\nreturns = false\n",
     )
     .unwrap();
 
@@ -547,6 +599,7 @@ fn reject_invalid_configuration(root: &std::path::Path, sources: &[(&str, &str)]
         "[unknown]\nreturns = false",
         "[python]\nreturns = 3",
         "[javascript]\nunknown = false",
+        "[nushell]\nclasses = false",
         "include = [\"[\"]",
         "exclude = [\"[\"]",
     ] {

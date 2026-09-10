@@ -25,6 +25,7 @@ tree-sitter-c = "0.24.2"
 tree-sitter-cpp = "0.23.4"
 tree-sitter-javascript = "0.25.0"
 tree-sitter-lua = "0.5.0"
+tree-sitter-nu = { git = "https://github.com/nushell/tree-sitter-nu", rev = "64613ef22f4116862d7997939c8d1794ceb1f856", version = "0.0.1" }
 tree-sitter-python = "0.25.0"
 tree-sitter-typescript = "0.23.2"
 vermis = "0.1.0"

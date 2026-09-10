@@ -306,7 +306,7 @@
           "type": "boolean"
         },
         "objects": {
-          "description": "Separate multiline object and dictionary expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "description": "Separate multiline object, dictionary, and record expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
           "type": "boolean"
         },
         "related": {
@@ -424,7 +424,7 @@
           "default": true
         },
         "tables": {
-          "description": "Separate multiline Lua and Luau table expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "description": "Separate multiline Lua, Luau, and Nushell table expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
           "type": "boolean"
         },
         "variants": {
@@ -532,7 +532,7 @@
           "type": "boolean"
         },
         "tables": {
-          "description": "Separate multiline Lua and Luau table expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "description": "Separate multiline Lua, Luau, and Nushell table expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
           "type": "boolean"
         },
         "type_aliases": {
@@ -541,6 +541,122 @@
         },
         "type_groups": {
           "description": "Separate imported, local, and exported Luau type groups. Inherits `groups`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "variants": {
+          "description": "Separate multiline enum entries. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "while_loops": {
+          "description": "Separate while loops. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "nushell": {
+      "description": "Nushell spacing rules. Default: inherit global settings, then built-in defaults.",
+      "type": "object",
+      "properties": {
+        "arms": {
+          "description": "Separate multiline match arms and switch cases. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "arrays": {
+          "description": "Separate multiline array and sequence expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "blocks": {
+          "description": "Separate control flow and block declarations. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "calls": {
+          "description": "Separate multiline call expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "conditionals": {
+          "description": "Separate conditional statements and expressions. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "declarations": {
+          "description": "Separate multiline declarations not classified as calls, collections, or type aliases. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "fields": {
+          "description": "Separate multiline fields, members, and dictionary entries. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "for_loops": {
+          "description": "Separate for loops. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "functions": {
+          "description": "Separate function declarations. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "groups": {
+          "description": "Separate Luau module groups. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "loop_statements": {
+          "description": "Separate Nushell loop statements. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "match_arms": {
+          "description": "Separate multiline Rust and Nushell match arms. Inherits `arms`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "matches": {
+          "description": "Separate match statements and expressions. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "modules": {
+          "description": "Separate Nushell module and export-env declarations. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "multiline": {
+          "description": "Separate other multiline statements. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "objects": {
+          "description": "Separate multiline object, dictionary, and record expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "pipelines": {
+          "description": "Separate multiline Nushell pipelines. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "record_fields": {
+          "description": "Separate multiline Nushell record fields. Inherits `fields`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "related": {
+          "description": "Keep adjacent variable dependencies together without removing existing blank lines. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": false
+        },
+        "return_statements": {
+          "description": "Insert a blank line before noninitial return statements. Inherits `returns`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "returns": {
+          "description": "Separate noninitial returns and Rust tail expressions. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "tables": {
+          "description": "Separate multiline Lua, Luau, and Nushell table expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "try_blocks": {
+          "description": "Separate try statements. Inherits `blocks`. Omitted project keys inherit global settings first.",
           "type": "boolean"
         },
         "variants": {
@@ -630,7 +746,7 @@
           "default": true
         },
         "objects": {
-          "description": "Separate multiline object and dictionary expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "description": "Separate multiline object, dictionary, and record expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
           "type": "boolean"
         },
         "related": {
@@ -733,7 +849,7 @@
           "type": "boolean"
         },
         "match_arms": {
-          "description": "Separate multiline Rust match arms. Inherits `arms`. Omitted project keys inherit global settings first.",
+          "description": "Separate multiline Rust and Nushell match arms. Inherits `arms`. Omitted project keys inherit global settings first.",
           "type": "boolean"
         },
         "matches": {
@@ -870,7 +986,7 @@
           "type": "boolean"
         },
         "objects": {
-          "description": "Separate multiline object and dictionary expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "description": "Separate multiline object, dictionary, and record expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
           "type": "boolean"
         },
         "related": {
