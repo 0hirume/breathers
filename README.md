@@ -64,6 +64,18 @@ breathers -l luau -
 
 Reads UTF-8 source from stdin and writes formatted source to stdout without editing files. Diagnostics go to stderr. Configuration loading and spacing rules apply as usual. Include/exclude globs are validated but do not filter stdin. Line endings and the presence or absence of a final newline are preserved.
 
+### Language server
+
+```sh
+breathers --lsp
+```
+
+Runs a formatting-only language server over stdio using tower-lsp-server. It accepts full-document synchronization and returns document-formatting edits for the current buffer without writing files. Unchanged or excluded documents produce no edits. Syntax and configuration errors produce protocol errors instead of edits. Existing blank lines, including handwritten require-group spacing, are preserved.
+
+The document's language identifier selects the formatter, with file-extension detection as a fallback. File documents use the nearest project configuration above their directory, overlaid on global configuration; include/exclude globs apply. Non-file documents use configuration from the server's working directory and are not filtered by file globs. Configuration is read on each formatting request. `--config` selects an explicit project configuration, resolved from the server's starting directory.
+
+`--lsp` accepts `--config` and is separate from file, stdin, language-override, and schema-printing modes. Formatting uses LSP's default UTF-16 positions and returns a whole-document replacement when spacing changes. The server does not provide completion, hover, or navigation.
+
 ## Configuration
 
 Project configuration comes from the nearest `breathers.toml`, searching the current working directory and then its ancestors. Select a different project configuration with `-c` / `--config`:

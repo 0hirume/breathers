@@ -574,9 +574,14 @@ impl Configuration {
 
     pub fn load(path: Option<&Path>) -> Result<(Self, PathBuf), String> {
         let directory = std::env::current_dir().map_err(|error| error.to_string())?;
+
+        Self::load_in(&directory, path)
+    }
+
+    pub fn load_in(directory: &Path, path: Option<&Path>) -> Result<(Self, PathBuf), String> {
         let global = dirs::config_dir().map(|directory| directory.join("breathers/config.toml"));
 
-        Self::load_from(&directory, global.as_deref(), path)
+        Self::load_from(directory, global.as_deref(), path)
     }
 }
 

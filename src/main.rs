@@ -9,6 +9,7 @@ use std::{
 use clap::{Parser, ValueEnum};
 
 mod configuration;
+mod server;
 mod spacing;
 mod syntax;
 
@@ -123,6 +124,9 @@ struct Arguments {
         help = "Print the configuration JSON Schema without formatting files"
     )]
     schema: bool,
+
+    #[arg(long = "lsp", conflicts_with_all = ["paths", "language", "schema"], help = "Run the formatting language server over stdio")]
+    server: bool,
 }
 
 fn collect(
@@ -172,6 +176,10 @@ fn collect(
 
 fn run() -> Result<(), String> {
     let arguments = Arguments::parse();
+
+    if arguments.server {
+        return server::run(arguments.config);
+    }
 
     if arguments.schema {
         println!(

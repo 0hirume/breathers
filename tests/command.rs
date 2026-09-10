@@ -19,6 +19,267 @@ fn input(root: &std::path::Path, arguments: &[&str], source: &[u8]) -> Output {
     child.wait_with_output().unwrap()
 }
 
+fn protocol(
+    root: &std::path::Path,
+    arguments: &[&str],
+    messages: &[serde_json::Value],
+) -> std::collections::BTreeMap<i64, serde_json::Value> {
+    use std::io::{BufRead, Read};
+
+    let mut child = Command::new(env!("CARGO_BIN_EXE_breathers"))
+        .current_dir(root)
+        .args(arguments)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    let mut sender = child.stdin.take().unwrap();
+    let mut receiver = std::io::BufReader::new(child.stdout.take().unwrap());
+    let mut responses = std::collections::BTreeMap::new();
+
+    for message in messages {
+        let body = message.to_string();
+        write!(sender, "Content-Length: {}\r\n\r\n{body}", body.len()).unwrap();
+        sender.flush().unwrap();
+
+        if let Some(identifier) = message["id"].as_i64() {
+            let mut length = None;
+
+            loop {
+                let mut header = String::new();
+
+                assert_ne!(
+                    receiver.read_line(&mut header).unwrap(),
+                    0,
+                    "Server closed stdout"
+                );
+
+                if header == "\r\n" {
+                    break;
+                }
+
+                if let Some(value) = header.strip_prefix("Content-Length: ") {
+                    length = Some(value.trim().parse::<usize>().unwrap());
+                }
+            }
+
+            let mut body = vec![0; length.unwrap()];
+            receiver.read_exact(&mut body).unwrap();
+            let response: serde_json::Value = serde_json::from_slice(&body).unwrap();
+            assert_eq!(response["id"], identifier);
+            responses.insert(identifier, response);
+        }
+    }
+
+    drop(sender);
+    let output = child.wait_with_output().unwrap();
+
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    responses
+}
+
+#[test]
+fn serves_document_formatting_with_buffer_synchronization() {
+    use serde_json::json;
+    use tower_lsp_server::ls_types::Uri;
+
+    let root = std::env::temp_dir()
+        .join("breathers")
+        .join(std::process::id().to_string())
+        .join(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+                .to_string(),
+        );
+
+    let project = root.join("project");
+    fs::create_dir_all(project.join("src/generated")).unwrap();
+    fs::write(root.join("breathers.toml"), "[luau]\nreturns = false\n").unwrap();
+
+    fs::write(
+        project.join("breathers.toml"),
+        "include = [\"src/**\"]\nexclude = [\"**/generated/**\"]\n",
+    )
+    .unwrap();
+
+    let disk = "local disk = 1\nreturn disk\n";
+    fs::write(project.join("src/main.luau"), disk).unwrap();
+    let uri = Uri::from_file_path(project.join("src/main.luau")).unwrap();
+    let excluded = Uri::from_file_path(project.join("src/generated/example.luau")).unwrap();
+    let source = "local value = 1\r\nreturn '🙂'";
+    let formatted = "local value = 1\r\n\r\nreturn '🙂'";
+
+    let spaced =
+        "local first = require(\"shared/first\")\n\nlocal second = require(\"shared/second\")\n";
+
+    let responses = protocol(
+        &root,
+        &["--lsp"],
+        &[
+            json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"capabilities":{}}}),
+            json!({"jsonrpc":"2.0","method":"initialized","params":{}}),
+            json!({"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":uri,"languageId":"luau","version":1,"text":source}}}),
+            json!({"jsonrpc":"2.0","id":2,"method":"textDocument/formatting","params":{"textDocument":{"uri":uri},"options":{"tabSize":4,"insertSpaces":true}}}),
+            json!({"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":uri,"version":2},"contentChanges":[{"text":formatted}]}}),
+            json!({"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":uri,"version":1},"contentChanges":[{"text":"local broken = {"}]}}),
+            json!({"jsonrpc":"2.0","id":3,"method":"textDocument/formatting","params":{"textDocument":{"uri":uri},"options":{"tabSize":4,"insertSpaces":true}}}),
+            json!({"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":uri,"version":3},"contentChanges":[{"text":"local broken = {"}]}}),
+            json!({"jsonrpc":"2.0","id":4,"method":"textDocument/formatting","params":{"textDocument":{"uri":uri},"options":{"tabSize":4,"insertSpaces":true}}}),
+            json!({"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":uri,"version":4},"contentChanges":[{"range":{"start":{"line":0,"character":0},"end":{"line":0,"character":1}},"text":"x"}]}}),
+            json!({"jsonrpc":"2.0","id":5,"method":"textDocument/formatting","params":{"textDocument":{"uri":uri},"options":{"tabSize":4,"insertSpaces":true}}}),
+            json!({"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":uri,"version":5},"contentChanges":[{"text":spaced}]}}),
+            json!({"jsonrpc":"2.0","id":6,"method":"textDocument/formatting","params":{"textDocument":{"uri":uri},"options":{"tabSize":4,"insertSpaces":true}}}),
+            json!({"jsonrpc":"2.0","method":"textDocument/didClose","params":{"textDocument":{"uri":uri}}}),
+            json!({"jsonrpc":"2.0","id":7,"method":"textDocument/formatting","params":{"textDocument":{"uri":uri},"options":{"tabSize":4,"insertSpaces":true}}}),
+            json!({"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":excluded,"languageId":"luau","version":1,"text":source}}}),
+            json!({"jsonrpc":"2.0","id":8,"method":"textDocument/formatting","params":{"textDocument":{"uri":excluded},"options":{"tabSize":4,"insertSpaces":true}}}),
+            json!({"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"untitled:example","languageId":"luau","version":1,"text":source}}}),
+            json!({"jsonrpc":"2.0","id":9,"method":"textDocument/formatting","params":{"textDocument":{"uri":"untitled:example"},"options":{"tabSize":4,"insertSpaces":true}}}),
+            json!({"jsonrpc":"2.0","id":10,"method":"shutdown"}),
+            json!({"jsonrpc":"2.0","method":"exit"}),
+        ],
+    );
+
+    assert_eq!(responses.len(), 10);
+    assert!(responses[&1].get("error").is_none(), "{}", responses[&1]);
+
+    assert_eq!(
+        responses[&1]["result"]["capabilities"]["textDocumentSync"],
+        1
+    );
+
+    assert_eq!(
+        responses[&1]["result"]["capabilities"]["documentFormattingProvider"],
+        true
+    );
+
+    assert_eq!(responses[&2]["result"][0]["newText"], formatted);
+
+    assert_eq!(
+        responses[&2]["result"][0]["range"]["end"],
+        json!({"line":1,"character":11})
+    );
+
+    for identifier in [3, 6, 8, 9, 10] {
+        assert!(
+            responses[&identifier]["result"].is_null(),
+            "{}",
+            responses[&identifier]
+        );
+
+        assert!(
+            responses[&identifier].get("error").is_none(),
+            "{}",
+            responses[&identifier]
+        );
+    }
+
+    for identifier in [4, 5, 7] {
+        assert_eq!(responses[&identifier]["error"]["code"], -32602);
+    }
+
+    assert_eq!(
+        fs::read_to_string(project.join("src/main.luau")).unwrap(),
+        disk
+    );
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn applies_explicit_server_configuration_and_rejects_mixed_modes() {
+    use serde_json::json;
+
+    let root = std::env::temp_dir()
+        .join("breathers")
+        .join(std::process::id().to_string())
+        .join(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+                .to_string(),
+        );
+
+    fs::create_dir_all(root.join("nested")).unwrap();
+
+    fs::write(
+        root.join("nested/breathers.toml"),
+        "[luau]\nreturns = false\n",
+    )
+    .unwrap();
+
+    let uri =
+        tower_lsp_server::ls_types::Uri::from_file_path(root.join("nested/example.luau")).unwrap();
+
+    let source = "local value = 1\nreturn value\n";
+
+    for (configuration, expected) in [
+        ("[luau]\nrelated = true\n", None),
+        (
+            "[luau]\nrelated = false\n",
+            Some("local value = 1\n\nreturn value\n"),
+        ),
+        ("include = []\n", None),
+        ("[luau]\nunknown = true\n", None),
+    ] {
+        fs::write(root.join("selected.toml"), configuration).unwrap();
+
+        let responses = protocol(
+            &root,
+            &["--lsp", "-c", "selected.toml"],
+            &[
+                json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"capabilities":{}}}),
+                json!({"jsonrpc":"2.0","method":"initialized","params":{}}),
+                json!({"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":uri,"languageId":"unknown","version":1,"text":source}}}),
+                json!({"jsonrpc":"2.0","id":2,"method":"textDocument/formatting","params":{"textDocument":{"uri":uri},"options":{"tabSize":4,"insertSpaces":true}}}),
+                json!({"jsonrpc":"2.0","id":3,"method":"shutdown"}),
+                json!({"jsonrpc":"2.0","method":"exit"}),
+            ],
+        );
+
+        if configuration.contains("unknown") {
+            assert_eq!(responses[&2]["error"]["code"], -32602);
+        } else {
+            assert!(responses[&2].get("error").is_none(), "{}", responses[&2]);
+
+            if let Some(expected) = expected {
+                assert_eq!(responses[&2]["result"][0]["newText"], expected);
+            } else {
+                assert!(responses[&2]["result"].is_null());
+            }
+        }
+    }
+
+    for arguments in [
+        vec!["--lsp", "-"],
+        vec!["--lsp", "."],
+        vec!["--lsp", "-l", "luau"],
+        vec!["--lsp", "--schema"],
+    ] {
+        let output = Command::new(env!("CARGO_BIN_EXE_breathers"))
+            .current_dir(&root)
+            .args(arguments)
+            .output()
+            .unwrap();
+
+        assert!(!output.status.success());
+        assert_eq!(output.stdout, Vec::<u8>::new());
+    }
+
+    assert!(!root.join("nested/example.luau").exists());
+    fs::remove_dir_all(root).unwrap();
+}
+
 #[test]
 fn formats_standard_input_without_writing_files() {
     let root = std::env::temp_dir()
