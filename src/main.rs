@@ -5,145 +5,55 @@ use std::{
     process::ExitCode,
 };
 
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 
-use ra_ap_syntax::{AstNode, Edition, SourceFile, SyntaxKind, SyntaxNode, ast};
+mod c;
+mod rust;
+mod spacing;
 
-fn multiline(node: &SyntaxNode) -> bool {
-    node.descendants_with_tokens().any(|element| {
-        element.kind() == SyntaxKind::WHITESPACE && element.to_string().contains('\n')
-    })
+#[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
+enum Language {
+    Rust,
+    C,
+
+    #[value(name = "c++")]
+    CPlusPlus,
 }
 
-fn needs_spacing(statement: &SyntaxNode) -> bool {
-    statement.descendants().any(|node| {
-        matches!(
-            node.kind(),
-            SyntaxKind::IF_EXPR
-                | SyntaxKind::MATCH_EXPR
-                | SyntaxKind::FOR_EXPR
-                | SyntaxKind::WHILE_EXPR
-                | SyntaxKind::LOOP_EXPR
-                | SyntaxKind::BLOCK_EXPR
-        )
-    }) || multiline(statement)
-}
+impl Language {
+    fn infer(path: &Path) -> Option<Self> {
+        match path.extension()?.to_str()? {
+            "rs" => Some(Self::Rust),
+            "c" | "h" => Some(Self::C),
 
-fn breathe(source: &str) -> Result<String, String> {
-    let parsed = SourceFile::parse(source, Edition::CURRENT);
-    let errors = parsed.errors();
-
-    if !errors.is_empty() {
-        return Err(errors
-            .iter()
-            .map(ToString::to_string)
-            .collect::<Vec<_>>()
-            .join("; "));
-    }
-
-    let mut insertions = BTreeSet::new();
-
-    for block in parsed.tree().syntax().descendants().filter(|node| {
-        matches!(
-            node.kind(),
-            SyntaxKind::STMT_LIST | SyntaxKind::MATCH_ARM_LIST | SyntaxKind::VARIANT_LIST
-        ) || (matches!(
-            node.kind(),
-            SyntaxKind::RECORD_FIELD_LIST | SyntaxKind::TUPLE_FIELD_LIST
-        ) && node
-            .parent()
-            .is_some_and(|parent| parent.kind() == SyntaxKind::STRUCT))
-    }) {
-        let statements: Vec<_> = block.children().collect();
-
-        for pair in statements.windows(2) {
-            let separate = if block.kind() == SyntaxKind::STMT_LIST {
-                needs_spacing(&pair[0])
-                    || needs_spacing(&pair[1])
-                    || ast::Expr::can_cast(pair[1].kind())
-                    || pair[1]
-                        .children()
-                        .any(|node| node.kind() == SyntaxKind::RETURN_EXPR)
-            } else {
-                multiline(&pair[0]) || multiline(&pair[1])
-            };
-            if !separate {
-                continue;
+            "C" | "H" | "cc" | "cpp" | "cxx" | "c++" | "hh" | "hpp" | "hxx" | "h++" => {
+                Some(Self::CPlusPlus)
             }
 
-            let start = usize::from(pair[0].text_range().end());
-            let end = pair[1]
-                .descendants_with_tokens()
-                .filter_map(ra_ap_syntax::NodeOrToken::into_token)
-                .find(|token| !token.kind().is_trivia())
-                .map_or(usize::from(pair[1].text_range().start()), |token| {
-                    usize::from(token.text_range().start())
-                });
-            let mut boundary = None;
-            let mut already_spaced = false;
-
-            for element in std::iter::successors(
-                pair[0].last_token().and_then(|token| token.next_token()),
-                ra_ap_syntax::SyntaxToken::next_token,
-            )
-            .take_while(|element| usize::from(element.text_range().start()) < end)
-            {
-                if element.kind() != SyntaxKind::WHITESPACE {
-                    continue;
-                }
-
-                let range = element.text_range();
-                let offset = usize::from(range.start());
-
-                if offset < start || usize::from(range.end()) > end {
-                    continue;
-                }
-
-                let whitespace = &source[offset..usize::from(range.end())];
-
-                if whitespace.bytes().filter(|byte| *byte == b'\n').count() > 1 {
-                    already_spaced = true;
-                }
-
-                if boundary.is_none()
-                    && let Some(newline) = whitespace.find('\n')
-                {
-                    boundary = Some(offset + newline + 1);
-                }
-            }
-
-            if !already_spaced && let Some(boundary) = boundary {
-                insertions.insert(boundary);
-            }
+            _ => None,
         }
     }
 
-    let mut output = String::new();
-    let mut previous = 0;
-
-    for offset in insertions {
-        output.push_str(&source[previous..offset]);
-
-        output.push_str(if source[..offset].ends_with("\r\n") {
-            "\r\n"
-        } else {
-            "\n"
-        });
-
-        previous = offset;
+    fn breathe(self, source: &str) -> Result<String, String> {
+        match self {
+            Self::Rust => rust::breathe(source),
+            Self::C => c::breathe(source, &tree_sitter_c::LANGUAGE.into()),
+            Self::CPlusPlus => c::breathe(source, &tree_sitter_cpp::LANGUAGE.into()),
+        }
     }
-
-    output.push_str(&source[previous..]);
-    Ok(output)
 }
 
 #[derive(Parser)]
-/// Give Rust code breathing room.
+#[command(about = "Give Rust, C, and C++ code breathing room")]
 struct Arguments {
-    /// Rust files or directories to format recursively.
-    // An omitted path means the entire current directory.
-    #[arg(default_value = ".")]
+    #[arg(
+        default_value = ".",
+        help = "Source files or directories to format recursively"
+    )]
     paths: Vec<PathBuf>,
+
+    #[arg(short, long, value_enum, help = "Override language detection")]
+    language: Option<Language>,
 }
 
 fn collect(
@@ -177,13 +87,7 @@ fn collect(
                 continue;
             }
 
-            if kind.is_dir()
-                || (kind.is_file()
-                    && entry
-                        .path()
-                        .extension()
-                        .is_some_and(|extension| extension == "rs"))
-            {
+            if kind.is_dir() || (kind.is_file() && Language::infer(&entry.path()).is_some()) {
                 collect(&entry.path(), files, directories)?;
             }
         }
@@ -211,7 +115,19 @@ fn run() -> Result<(), String> {
         let source =
             fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
 
-        let output = breathe(&source).map_err(|error| format!("{}: {error}", path.display()))?;
+        let language = arguments
+            .language
+            .or_else(|| Language::infer(&path))
+            .ok_or_else(|| {
+                format!(
+                    "{}: unknown language; specify --language (-l)",
+                    path.display()
+                )
+            })?;
+
+        let output = language
+            .breathe(&source)
+            .map_err(|error| format!("{}: {error}", path.display()))?;
 
         if source != output {
             changes.push((path, output));
@@ -228,8 +144,10 @@ fn run() -> Result<(), String> {
 fn main() -> ExitCode {
     match run() {
         Ok(()) => ExitCode::SUCCESS,
+
         Err(error) => {
             eprintln!("{error}");
+
             ExitCode::FAILURE
         }
     }
@@ -237,12 +155,74 @@ fn main() -> ExitCode {
 
 #[cfg(test)]
 mod tests {
-    use super::{Arguments, breathe, collect};
+    use super::{Arguments, Language, collect};
+    use crate::rust::breathe;
     use clap::Parser;
     use std::{collections::BTreeSet, fs, path::PathBuf};
 
     #[test]
-    fn discovers_rust_files_and_deduplicates_paths() {
+    fn selects_languages_and_accepts_shorthand() {
+        for (path, expected) in [
+            ("main.rs", Language::Rust),
+            ("main.c", Language::C),
+            ("header.h", Language::C),
+            ("main.cpp", Language::CPlusPlus),
+            ("main.cc", Language::CPlusPlus),
+            ("main.cxx", Language::CPlusPlus),
+            ("header.hpp", Language::CPlusPlus),
+            ("header.hh", Language::CPlusPlus),
+            ("header.hxx", Language::CPlusPlus),
+            ("main.C", Language::CPlusPlus),
+        ] {
+            assert_eq!(Language::infer(std::path::Path::new(path)), Some(expected));
+        }
+
+        assert_eq!(Language::infer(std::path::Path::new("unknown")), None);
+        assert!(Arguments::try_parse_from(["breathers", "-l", "unknown"]).is_err());
+
+        assert_eq!(
+            Arguments::try_parse_from(["breathers"]).unwrap().language,
+            None
+        );
+
+        for flag in ["-l", "--language"] {
+            for (name, expected) in [
+                ("rust", Language::Rust),
+                ("c", Language::C),
+                ("c++", Language::CPlusPlus),
+            ] {
+                assert_eq!(
+                    Arguments::try_parse_from(["breathers", flag, name, "header.h"])
+                        .unwrap()
+                        .language,
+                    Some(expected)
+                );
+            }
+        }
+
+        for (language, source, expected) in [
+            (
+                Language::Rust,
+                "fn example() {\n    work();\n    result\n}\n",
+                "fn example() {\n    work();\n\n    result\n}\n",
+            ),
+            (
+                Language::C,
+                "int example(void) {\n    work();\n    return 1;\n}\n",
+                "int example(void) {\n    work();\n\n    return 1;\n}\n",
+            ),
+            (
+                Language::CPlusPlus,
+                "int example() {\n    auto value = 1;\n    return value;\n}\n",
+                "int example() {\n    auto value = 1;\n\n    return value;\n}\n",
+            ),
+        ] {
+            assert_eq!(language.breathe(source).unwrap(), expected);
+        }
+    }
+
+    #[test]
+    fn discovers_source_files_and_deduplicates_paths() {
         let root = std::env::temp_dir().join(format!(
             "breathers-{}-{}",
             std::process::id(),
@@ -262,6 +242,10 @@ mod tests {
             "root.rs",
             "src/main.rs",
             "src/nested/module.rs",
+            "src/main.c",
+            "src/header.h",
+            "src/main.cpp",
+            "src/header.hpp",
             "src/notes.txt",
             "target/generated.rs",
             ".git/ignored.rs",
@@ -269,10 +253,18 @@ mod tests {
             fs::write(root.join(file), "fn example() {}\n").unwrap();
         }
 
-        let expected: BTreeSet<_> = ["root.rs", "src/main.rs", "src/nested/module.rs"]
-            .map(|path| fs::canonicalize(root.join(path)).unwrap())
-            .into_iter()
-            .collect();
+        let expected: BTreeSet<_> = [
+            "root.rs",
+            "src/main.rs",
+            "src/nested/module.rs",
+            "src/main.c",
+            "src/header.h",
+            "src/main.cpp",
+            "src/header.hpp",
+        ]
+        .map(|path| fs::canonicalize(root.join(path)).unwrap())
+        .into_iter()
+        .collect();
 
         let mut files = BTreeSet::new();
         let mut directories = BTreeSet::new();
@@ -283,7 +275,7 @@ mod tests {
         files.clear();
         directories.clear();
         collect(&root.join("src"), &mut files, &mut directories).unwrap();
-        assert_eq!(files.len(), 2);
+        assert_eq!(files.len(), 6);
         files.clear();
         collect(&root.join("src/main.rs"), &mut files, &mut directories).unwrap();
 
@@ -346,20 +338,27 @@ mod tests {
     #[test]
     fn spaces_multiline_struct_fields() {
         let source = "struct Processor {\n    name: String,\n    enabled: bool,\n    callback: Box<\n        dyn Fn(&Request) -> Result<Response, Error>\n            + Send\n            + Sync,\n    >,\n    retries: usize,\n}\n";
+
         let expected = source
             .replace("    callback:", "\n    callback:")
             .replace("    retries:", "\n    retries:");
+
         assert_eq!(breathe(source).unwrap(), expected);
         assert_eq!(breathe(&expected).unwrap(), expected);
+
         assert_eq!(
             breathe(&source.replace('\n', "\r\n")).unwrap(),
             expected.replace('\n', "\r\n")
         );
+
         let source = "struct Tuple(\n    u32,\n    Box<\n        String,\n    >,\n    bool,\n);\n";
+
         let expected = source
             .replace("    Box<", "\n    Box<")
             .replace("    bool,", "\n    bool,");
+
         assert_eq!(breathe(source).unwrap(), expected);
+
         for source in [
             "struct Simple {\n    first: u32,\n    second: bool,\n}\n",
             "struct Only {\n    value: Box<\n        String,\n    >,\n}\n",
@@ -380,10 +379,12 @@ mod tests {
             let source = format!(
                 "fn example() {{\n    let result = calculate();\n    save();\n    {expression}\n}}\n"
             );
+
             let expected = source.replace("    save();\n", "    save();\n\n");
             assert_eq!(breathe(&source).unwrap(), expected);
             assert_eq!(breathe(&expected).unwrap(), expected);
         }
+
         for source in [
             "fn example() {\n    return result;\n}\n",
             "fn example() {\n    result\n}\n",
@@ -397,16 +398,20 @@ mod tests {
     #[test]
     fn spaces_multiline_enum_variants() {
         let source = "enum Example {\n    First,\n    Second(u32), // trailing\n    // attached\n    Record {\n        value: u32,\n    },\n    Tuple(\n        u32,\n        String,\n    ),\n    Last,\n}\n";
+
         let expected = source
             .replace("// trailing\n", "// trailing\n\n")
             .replace("    },\n", "    },\n\n")
             .replace("    ),\n", "    ),\n\n");
+
         assert_eq!(breathe(source).unwrap(), expected);
         assert_eq!(breathe(&expected).unwrap(), expected);
+
         assert_eq!(
             breathe(&source.replace('\n', "\r\n")).unwrap(),
             expected.replace('\n', "\r\n")
         );
+
         for source in [
             "enum Example { First, Second(u32), Record { value: u32 } }\n",
             "enum Example {\n    First,\n    Second(u32),\n    Record { value: u32 },\n}\n",
@@ -419,15 +424,19 @@ mod tests {
     #[test]
     fn spaces_multiline_match_arms() {
         let source = "fn example() {\n    match kind {\n        Kind::First => 1,\n        Kind::Second => 2, // trailing\n        // attached\n        Kind::Index => Parts::Index {\n            receiver: children.next()?,\n            key: children.next()?,\n        },\n        Kind::Instantiate => Parts::Instantiate {\n            expression: children.next()?,\n            arguments: children.next()?,\n        },\n        Kind::Last => 3,\n    }\n}\n";
+
         let expected = source
             .replace("// trailing\n", "// trailing\n\n")
             .replace("        },\n", "        },\n\n");
+
         assert_eq!(breathe(source).unwrap(), expected);
         assert_eq!(breathe(&expected).unwrap(), expected);
+
         assert_eq!(
             breathe(&source.replace('\n', "\r\n")).unwrap(),
             expected.replace('\n', "\r\n")
         );
+
         for source in [
             "fn example() {\n    match kind {\n        First => if ready() { 1 } else { 2 },\n        Second => { 3 },\n        _ => 4,\n    }\n}\n",
             "fn example() {\n    match kind {\n        First => r#\"first\nsecond\"#,\n        _ => \"last\",\n    }\n}\n",
