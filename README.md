@@ -30,16 +30,16 @@ breathers src/
 breathers src/main.rs src/main.luau
 ```
 
-| Language | Extensions |
-| --- | --- |
-| Rust | `.rs` |
-| Lua | `.lua` |
-| Luau | `.luau` |
-| C | `.c`, `.h` |
-| C++ | `.cpp`, `.cc`, `.cxx`, `.c++`, `.hpp`, `.hh`, `.hxx`, `.h++`, `.C`, `.H` |
-| Python | `.py`, `.pyi` |
-| JavaScript / JSX | `.js`, `.jsx`, `.mjs`, `.cjs` |
-| TypeScript / TSX | `.ts`, `.mts`, `.cts`, `.tsx` |
+| Language         | Extensions                                                               |
+| ---------------- | ------------------------------------------------------------------------ |
+| Rust             | `.rs`                                                                    |
+| Lua              | `.lua`                                                                   |
+| Luau             | `.luau`                                                                  |
+| C                | `.c`, `.h`                                                               |
+| C++              | `.cpp`, `.cc`, `.cxx`, `.c++`, `.hpp`, `.hh`, `.hxx`, `.h++`, `.C`, `.H` |
+| Python           | `.py`, `.pyi`                                                            |
+| JavaScript / JSX | `.js`, `.jsx`, `.mjs`, `.cjs`                                            |
+| TypeScript / TSX | `.ts`, `.mts`, `.cts`, `.tsx`                                            |
 
 Override detection with `-l` / `--language`. Use `-l luau` for Luau files named `.lua`, or `-l tsx` to select TSX explicitly.
 
@@ -114,3 +114,7 @@ fn example() {
     finish();
 }
 ```
+
+## Request a language
+
+[Open an issue](https://github.com/0hirume/breathers/issues/new) with the language and a before/after example showing the spacing you want.
