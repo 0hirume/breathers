@@ -228,6 +228,7 @@ fn run() -> Result<(), String> {
     }
 
     let mut changes = Vec::new();
+    let mut errors = Vec::new();
 
     for path in files {
         let source =
@@ -243,9 +244,14 @@ fn run() -> Result<(), String> {
                 )
             })?;
 
-        let output = language
-            .breathe(&source, &configuration)
-            .map_err(|error| format!("{}: {error}", path.display()))?;
+        let output = match language.breathe(&source, &configuration) {
+            Ok(output) => output,
+
+            Err(error) => {
+                errors.push(format!("{}: {error}", path.display()));
+                continue;
+            }
+        };
 
         if source != output {
             changes.push((path, output));
@@ -256,7 +262,11 @@ fn run() -> Result<(), String> {
         fs::write(&path, output).map_err(|error| format!("{}: {error}", path.display()))?;
     }
 
-    Ok(())
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(errors.join("\n"))
+    }
 }
 
 fn main() -> ExitCode {

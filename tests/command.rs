@@ -722,7 +722,7 @@ fn detects_lua_and_luau_and_accepts_overrides() {
 
     assert_eq!(
         fs::read_to_string(root.join("src/main.luau")).unwrap(),
-        source
+        expected
     );
 
     assert_eq!(
@@ -767,14 +767,19 @@ fn detects_lua_and_luau_and_accepts_overrides() {
 
     assert_eq!(
         fs::read_to_string(root.join("src/main.luau")).unwrap(),
-        source
+        expected
+    );
+
+    assert_eq!(
+        fs::read_to_string(root.join("src/module.lua")).unwrap(),
+        "local broken = {"
     );
 
     fs::remove_dir_all(root).unwrap();
 }
 
 #[test]
-fn formats_selected_files_and_rejects_errors_before_writing() {
+fn formats_selected_files() {
     let root = std::env::temp_dir().join(format!(
         "breathers-{}-{}",
         std::process::id(),
@@ -846,7 +851,28 @@ fn formats_selected_files_and_rejects_errors_before_writing() {
         }
     }
 
-    for (name, invalid) in [("unknown", source), ("broken.cpp", "int broken( {")] {
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn formats_valid_files_and_reports_syntax_errors() {
+    let root = std::env::temp_dir().join(format!(
+        "breathers-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+
+    fs::create_dir(&root).unwrap();
+    let source = "int example(void) {\n    work();\n    return 1;\n}\n";
+    let expected = source.replace("    return", "\n    return");
+
+    for (name, invalid, formatted) in [
+        ("unknown", source, source),
+        ("broken.cpp", "int broken( {", expected.as_str()),
+    ] {
         fs::write(root.join("main.c"), source).unwrap();
         fs::write(root.join(name), invalid).unwrap();
 
@@ -857,8 +883,35 @@ fn formats_selected_files_and_rejects_errors_before_writing() {
             .unwrap();
 
         assert!(!output.status.success());
-        assert_eq!(fs::read_to_string(root.join("main.c")).unwrap(), source);
+        assert!(String::from_utf8_lossy(&output.stderr).contains(name));
+        assert_eq!(fs::read_to_string(root.join("main.c")).unwrap(), formatted);
+        assert_eq!(fs::read_to_string(root.join(name)).unwrap(), invalid);
     }
+
+    fs::write(root.join("main.c"), source).unwrap();
+    fs::write(root.join("broken.rs"), "fn broken( {").unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_breathers"))
+        .current_dir(&root)
+        .args(["broken.cpp", "main.c", "broken.rs"])
+        .output()
+        .unwrap();
+
+    assert!(!output.status.success());
+    let errors = String::from_utf8_lossy(&output.stderr);
+    assert!(errors.contains("broken.cpp"));
+    assert!(errors.contains("broken.rs"));
+    assert_eq!(fs::read_to_string(root.join("main.c")).unwrap(), expected);
+
+    assert_eq!(
+        fs::read_to_string(root.join("broken.cpp")).unwrap(),
+        "int broken( {"
+    );
+
+    assert_eq!(
+        fs::read_to_string(root.join("broken.rs")).unwrap(),
+        "fn broken( {"
+    );
 
     let source = "template<typename Value>\nValue example(Value value) {\n    work();\n    return value;\n}\n";
     fs::write(root.join("cplusplus.h"), source).unwrap();
