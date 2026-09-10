@@ -7,6 +7,7 @@ repository = "https://github.com/0hirume/breathers"
 license = "MIT"
 keywords = ["formatter", "readability", "rust", "whitespace"]
 categories = ["command-line-utilities", "development-tools"]
+publish = false
 
 [dependencies]
 clap = { version = "4.6.6", features = ["derive"] }
