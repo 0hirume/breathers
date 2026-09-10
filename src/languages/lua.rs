@@ -1,15 +1,15 @@
 use std::collections::BTreeSet;
 
-use crate::configuration::{Rule, Rules};
+use tree_sitter::Node;
 
-use tree_sitter::{Node, Parser};
+use crate::configuration::{Rule, Rules};
 
 fn opaque(node: Node<'_>) -> bool {
     matches!(node.kind(), "string" | "comment" | "hash_bang_line")
 }
 
-fn complex(node: Node<'_>, source: &str, rules: &Rules) -> bool {
-    let block = match node.kind() {
+fn block(node: Node<'_>) -> Option<Rule> {
+    match node.kind() {
         "if_statement" => Some(Rule::Conditionals),
         "while_statement" => Some(Rule::WhileLoops),
         "repeat_statement" => Some(Rule::RepeatLoops),
@@ -17,31 +17,34 @@ fn complex(node: Node<'_>, source: &str, rules: &Rules) -> bool {
         "do_statement" => Some(Rule::DoBlocks),
         "function_declaration" | "function_definition" => Some(Rule::Functions),
         _ => None,
-    };
+    }
+}
 
-    if let Some(rule) = block {
+fn expression(node: Node<'_>) -> Option<Rule> {
+    match node.kind() {
+        "function_call" => Some(Rule::Calls),
+        "table_constructor" => Some(Rule::Tables),
+        _ => None,
+    }
+}
+
+fn complex(node: Node<'_>, source: &str, rules: &Rules) -> bool {
+    if let Some(rule) = block(node) {
         rules.enabled(rule)
     } else {
-        let rule = crate::syntax::rule(
-            node,
-            |node| match node.kind() {
-                "function_call" => Some(Rule::Calls),
-                "table_constructor" => Some(Rule::Tables),
-                _ => None,
+        let rule = crate::syntax::rule(node, expression, opaque).unwrap_or(
+            if node.kind() == "variable_declaration" {
+                Rule::Declarations
+            } else {
+                Rule::Multiline
             },
-            opaque,
-        )
-        .unwrap_or(if node.kind() == "variable_declaration" {
-            Rule::Declarations
-        } else {
-            Rule::Multiline
-        });
+        );
 
         rules.enabled(rule) && crate::syntax::multiline(node, source, opaque)
     }
 }
 
-fn visit(node: Node<'_>, source: &str, insertions: &mut BTreeSet<usize>, rules: &Rules) {
+fn visit(node: Node<'_>, source: &str, rules: &Rules, insertions: &mut BTreeSet<usize>) {
     if opaque(node) {
         return;
     }
@@ -83,27 +86,12 @@ fn visit(node: Node<'_>, source: &str, insertions: &mut BTreeSet<usize>, rules: 
     }
 
     for child in children {
-        visit(child, source, insertions, rules);
+        visit(child, source, rules, insertions);
     }
 }
 
 pub fn breathe(source: &str, rules: &Rules) -> Result<String, String> {
-    let mut parser = Parser::new();
-
-    parser
-        .set_language(&tree_sitter_lua::LANGUAGE.into())
-        .map_err(|error| error.to_string())?;
-
-    let tree = parser.parse(source, None).ok_or("Could not parse source")?;
-
-    if tree.root_node().has_error() {
-        return Err("Syntax errors; no changes written".into());
-    }
-
-    let mut insertions = BTreeSet::new();
-    visit(tree.root_node(), source, &mut insertions, rules);
-
-    Ok(crate::spacing::apply(source, insertions))
+    crate::syntax::breathe(source, &tree_sitter_lua::LANGUAGE.into(), rules, visit)
 }
 
 #[cfg(test)]

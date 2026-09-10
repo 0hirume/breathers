@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use tree_sitter::{Language, Node, Parser};
+use tree_sitter::{Language, Node};
 
 use crate::configuration::{Rule, Rules};
 
@@ -38,22 +38,21 @@ fn block(node: Node<'_>) -> Option<Rule> {
     }
 }
 
+fn expression(node: Node<'_>) -> Option<Rule> {
+    match node.kind() {
+        "type_alias_declaration" => Some(Rule::TypeAliases),
+        "call_expression" | "new_expression" => Some(Rule::Calls),
+        "array" => Some(Rule::Arrays),
+        "object" => Some(Rule::Objects),
+        _ => None,
+    }
+}
+
 fn complex(node: Node<'_>, source: &str, rules: &Rules) -> bool {
     if let Some(rule) = block(node) {
         rules.enabled(rule)
     } else {
-        let rule = crate::syntax::rule(
-            node,
-            |node| match node.kind() {
-                "type_alias_declaration" => Some(Rule::TypeAliases),
-                "call_expression" | "new_expression" => Some(Rule::Calls),
-                "array" => Some(Rule::Arrays),
-                "object" => Some(Rule::Objects),
-                _ => None,
-            },
-            opaque,
-        )
-        .unwrap_or(
+        let rule = crate::syntax::rule(node, expression, opaque).unwrap_or(
             if matches!(node.kind(), "lexical_declaration" | "variable_declaration") {
                 Rule::Declarations
             } else {
@@ -157,22 +156,7 @@ fn visit(node: Node<'_>, source: &str, rules: &Rules, insertions: &mut BTreeSet<
 }
 
 pub fn breathe(source: &str, language: &Language, rules: &Rules) -> Result<String, String> {
-    let mut parser = Parser::new();
-
-    parser
-        .set_language(language)
-        .map_err(|error| error.to_string())?;
-
-    let tree = parser.parse(source, None).ok_or("Could not parse source")?;
-
-    if tree.root_node().has_error() {
-        return Err("Syntax errors; no changes written".into());
-    }
-
-    let mut insertions = BTreeSet::new();
-    visit(tree.root_node(), source, rules, &mut insertions);
-
-    Ok(crate::spacing::apply(source, insertions))
+    crate::syntax::breathe(source, language, rules, visit)
 }
 
 #[cfg(test)]

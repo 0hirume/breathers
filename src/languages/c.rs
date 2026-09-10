@@ -1,8 +1,8 @@
 use std::collections::BTreeSet;
 
-use crate::configuration::{Rule, Rules};
+use tree_sitter::{Language, Node};
 
-use tree_sitter::{Language, Node, Parser};
+use crate::configuration::{Rule, Rules};
 
 fn opaque(node: Node<'_>) -> bool {
     matches!(
@@ -15,12 +15,8 @@ fn opaque(node: Node<'_>) -> bool {
         ))
 }
 
-fn multiline(node: Node<'_>, source: &str) -> bool {
-    crate::syntax::multiline(node, source, opaque)
-}
-
-fn complex(node: Node<'_>, source: &str, rules: &Rules) -> bool {
-    let block = match node.kind() {
+fn block(node: Node<'_>) -> Option<Rule> {
+    match node.kind() {
         "if_statement" => Some(Rule::Conditionals),
         "switch_statement" => Some(Rule::Switches),
         "for_statement" | "for_range_loop" => Some(Rule::ForLoops),
@@ -29,31 +25,34 @@ fn complex(node: Node<'_>, source: &str, rules: &Rules) -> bool {
         "try_statement" => Some(Rule::TryBlocks),
         "function_definition" => Some(Rule::Functions),
         _ => None,
-    };
-
-    if let Some(rule) = block {
-        rules.enabled(rule)
-    } else {
-        let rule = crate::syntax::rule(
-            node,
-            |node| match node.kind() {
-                "call_expression" => Some(Rule::Calls),
-                "initializer_list" => Some(Rule::Arrays),
-                _ => None,
-            },
-            opaque,
-        )
-        .unwrap_or(if node.kind() == "declaration" {
-            Rule::Declarations
-        } else {
-            Rule::Multiline
-        });
-
-        rules.enabled(rule) && multiline(node, source)
     }
 }
 
-fn visit(node: Node<'_>, source: &str, insertions: &mut BTreeSet<usize>, rules: &Rules) {
+fn expression(node: Node<'_>) -> Option<Rule> {
+    match node.kind() {
+        "call_expression" => Some(Rule::Calls),
+        "initializer_list" => Some(Rule::Arrays),
+        _ => None,
+    }
+}
+
+fn complex(node: Node<'_>, source: &str, rules: &Rules) -> bool {
+    if let Some(rule) = block(node) {
+        rules.enabled(rule)
+    } else {
+        let rule = crate::syntax::rule(node, expression, opaque).unwrap_or(
+            if node.kind() == "declaration" {
+                Rule::Declarations
+            } else {
+                Rule::Multiline
+            },
+        );
+
+        rules.enabled(rule) && crate::syntax::multiline(node, source, opaque)
+    }
+}
+
+fn visit(node: Node<'_>, source: &str, rules: &Rules, insertions: &mut BTreeSet<usize>) {
     if opaque(node) || node.kind() == "call_expression" {
         return;
     }
@@ -99,12 +98,14 @@ fn visit(node: Node<'_>, source: &str, insertions: &mut BTreeSet<usize>, rules: 
                             };
 
                             rules.enabled(rule)
-                                && (multiline(left, source) || multiline(*child, source))
+                                && (crate::syntax::multiline(left, source, opaque)
+                                    || crate::syntax::multiline(*child, source, opaque))
                         } else if left.kind() == "case_statement"
                             && child.kind() == "case_statement"
                         {
                             rules.enabled(Rule::SwitchCases)
-                                && (multiline(left, source) || multiline(*child, source))
+                                && (crate::syntax::multiline(left, source, opaque)
+                                    || crate::syntax::multiline(*child, source, opaque))
                         } else {
                             complex(left, source, rules)
                                 || complex(*child, source, rules)
@@ -135,27 +136,12 @@ fn visit(node: Node<'_>, source: &str, insertions: &mut BTreeSet<usize>, rules: 
     }
 
     for child in children {
-        visit(child, source, insertions, rules);
+        visit(child, source, rules, insertions);
     }
 }
 
 pub fn breathe(source: &str, language: &Language, rules: &Rules) -> Result<String, String> {
-    let mut parser = Parser::new();
-
-    parser
-        .set_language(language)
-        .map_err(|error| error.to_string())?;
-
-    let tree = parser.parse(source, None).ok_or("Could not parse source")?;
-
-    if tree.root_node().has_error() {
-        return Err("Syntax errors; no changes written".into());
-    }
-
-    let mut insertions = BTreeSet::new();
-    visit(tree.root_node(), source, &mut insertions, rules);
-
-    Ok(crate::spacing::apply(source, insertions))
+    crate::syntax::breathe(source, language, rules, visit)
 }
 
 #[cfg(test)]

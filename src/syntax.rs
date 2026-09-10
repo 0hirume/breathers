@@ -1,6 +1,6 @@
-use tree_sitter::Node;
+use tree_sitter::{Language, Node, Parser};
 
-use crate::configuration::Rule;
+use crate::configuration::{Rule, Rules};
 
 pub fn rule(
     node: Node<'_>,
@@ -410,4 +410,28 @@ pub fn boundary(source: &str, start: usize, end: usize, comments: &[Node<'_>]) -
     }
 
     boundary
+}
+
+pub fn breathe(
+    source: &str,
+    language: &Language,
+    rules: &Rules,
+    visit: fn(Node<'_>, &str, &Rules, &mut std::collections::BTreeSet<usize>),
+) -> Result<String, String> {
+    let mut parser = Parser::new();
+
+    parser
+        .set_language(language)
+        .map_err(|error| error.to_string())?;
+
+    let tree = parser.parse(source, None).ok_or("Could not parse source")?;
+
+    if tree.root_node().has_error() {
+        return Err("Syntax errors; no changes written".into());
+    }
+
+    let mut insertions = std::collections::BTreeSet::new();
+    visit(tree.root_node(), source, rules, &mut insertions);
+
+    Ok(crate::spacing::apply(source, insertions))
 }

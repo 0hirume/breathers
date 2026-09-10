@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use tree_sitter::{Node, Parser};
+use tree_sitter::Node;
 
 use crate::configuration::{Rule, Rules};
 
@@ -8,8 +8,8 @@ fn opaque(node: Node<'_>) -> bool {
     matches!(node.kind(), "comment" | "string" | "concatenated_string")
 }
 
-fn complex(node: Node<'_>, source: &str, rules: &Rules) -> bool {
-    let block = match node.kind() {
+fn block(node: Node<'_>) -> Option<Rule> {
+    match node.kind() {
         "if_statement" => Some(Rule::Conditionals),
         "for_statement" => Some(Rule::ForLoops),
         "while_statement" => Some(Rule::WhileLoops),
@@ -31,29 +31,28 @@ fn complex(node: Node<'_>, source: &str, rules: &Rules) -> bool {
         ),
 
         _ => None,
-    };
+    }
+}
 
-    if let Some(rule) = block {
+fn expression(node: Node<'_>) -> Option<Rule> {
+    match node.kind() {
+        "call" => Some(Rule::Calls),
+
+        "list" | "tuple" | "set" | "list_comprehension" | "set_comprehension" => Some(Rule::Arrays),
+
+        "dictionary" | "dictionary_comprehension" => Some(Rule::Objects),
+        _ => None,
+    }
+}
+
+fn complex(node: Node<'_>, source: &str, rules: &Rules) -> bool {
+    if let Some(rule) = block(node) {
         rules.enabled(rule)
     } else {
         let rule = if node.kind() == "type_alias_statement" {
             Rule::TypeAliases
         } else {
-            crate::syntax::rule(
-                node,
-                |node| match node.kind() {
-                    "call" => Some(Rule::Calls),
-
-                    "list" | "tuple" | "set" | "list_comprehension" | "set_comprehension" => {
-                        Some(Rule::Arrays)
-                    }
-
-                    "dictionary" | "dictionary_comprehension" => Some(Rule::Objects),
-                    _ => None,
-                },
-                opaque,
-            )
-            .unwrap_or(
+            crate::syntax::rule(node, expression, opaque).unwrap_or(
                 if node.kind() == "expression_statement"
                     && node
                         .named_child(0)
@@ -128,22 +127,7 @@ fn visit(node: Node<'_>, source: &str, rules: &Rules, insertions: &mut BTreeSet<
 }
 
 pub fn breathe(source: &str, rules: &Rules) -> Result<String, String> {
-    let mut parser = Parser::new();
-
-    parser
-        .set_language(&tree_sitter_python::LANGUAGE.into())
-        .map_err(|error| error.to_string())?;
-
-    let tree = parser.parse(source, None).ok_or("Could not parse source")?;
-
-    if tree.root_node().has_error() {
-        return Err("Syntax errors; no changes written".into());
-    }
-
-    let mut insertions = BTreeSet::new();
-    visit(tree.root_node(), source, rules, &mut insertions);
-
-    Ok(crate::spacing::apply(source, insertions))
+    crate::syntax::breathe(source, &tree_sitter_python::LANGUAGE.into(), rules, visit)
 }
 
 #[cfg(test)]

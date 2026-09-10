@@ -1,8 +1,11 @@
 use std::collections::BTreeSet;
 
-use crate::configuration::{Rule, Rules};
+use ra_ap_syntax::{
+    AstNode, Edition, SourceFile, SyntaxKind, SyntaxNode,
+    ast::{self, HasName},
+};
 
-use ra_ap_syntax::{AstNode, Edition, SourceFile, SyntaxKind, SyntaxNode, ast};
+use crate::configuration::{Rule, Rules};
 
 fn multiline(node: &SyntaxNode) -> bool {
     node.descendants_with_tokens().any(|element| {
@@ -10,8 +13,8 @@ fn multiline(node: &SyntaxNode) -> bool {
     })
 }
 
-fn needs_spacing(statement: &SyntaxNode, rules: &Rules) -> bool {
-    let block = statement.descendants().find_map(|node| match node.kind() {
+fn block(node: &SyntaxNode) -> Option<Rule> {
+    match node.kind() {
         SyntaxKind::IF_EXPR => Some(Rule::Conditionals),
         SyntaxKind::MATCH_EXPR => Some(Rule::Matches),
         SyntaxKind::FOR_EXPR => Some(Rule::ForLoops),
@@ -28,29 +31,34 @@ fn needs_spacing(statement: &SyntaxNode, rules: &Rules) -> bool {
 
         SyntaxKind::BLOCK_EXPR => Some(Rule::BlockExpressions),
         _ => None,
-    });
+    }
+}
 
-    if let Some(rule) = block {
+fn expression(node: &SyntaxNode) -> Option<Rule> {
+    match node.kind() {
+        SyntaxKind::CALL_EXPR | SyntaxKind::METHOD_CALL_EXPR => Some(Rule::Calls),
+        SyntaxKind::ARRAY_EXPR => Some(Rule::Arrays),
+        _ => None,
+    }
+}
+
+fn complex(node: &SyntaxNode, rules: &Rules) -> bool {
+    if let Some(rule) = node.descendants().find_map(|node| block(&node)) {
         rules.enabled(rule)
     } else {
-        let rule = if statement.kind() == SyntaxKind::TYPE_ALIAS {
+        let rule = if node.kind() == SyntaxKind::TYPE_ALIAS {
             Rule::TypeAliases
         } else {
-            statement
-                .descendants()
-                .find_map(|node| match node.kind() {
-                    SyntaxKind::CALL_EXPR | SyntaxKind::METHOD_CALL_EXPR => Some(Rule::Calls),
-                    SyntaxKind::ARRAY_EXPR => Some(Rule::Arrays),
-                    _ => None,
-                })
-                .unwrap_or(if statement.kind() == SyntaxKind::LET_STMT {
+            node.descendants()
+                .find_map(|node| expression(&node))
+                .unwrap_or(if node.kind() == SyntaxKind::LET_STMT {
                     Rule::Declarations
                 } else {
                     Rule::Multiline
                 })
         };
 
-        rules.enabled(rule) && multiline(statement)
+        rules.enabled(rule) && multiline(node)
     }
 }
 
@@ -152,7 +160,6 @@ fn reads(node: &SyntaxNode, names: &BTreeSet<String>) -> bool {
 }
 
 fn related(previous: &SyntaxNode, next: &SyntaxNode) -> bool {
-    use ast::HasName;
     let mut names = BTreeSet::new();
 
     if let Some(statement) = ast::LetStmt::cast(previous.clone()) {
@@ -207,8 +214,8 @@ pub fn breathe(source: &str, rules: &Rules) -> Result<String, String> {
 
         for pair in statements.windows(2) {
             let separate = if block.kind() == SyntaxKind::STMT_LIST {
-                needs_spacing(&pair[0], rules)
-                    || needs_spacing(&pair[1], rules)
+                complex(&pair[0], rules)
+                    || complex(&pair[1], rules)
                     || (if pair[1].kind() == SyntaxKind::RETURN_EXPR
                         || pair[1]
                             .children()

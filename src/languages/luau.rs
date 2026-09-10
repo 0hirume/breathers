@@ -1,8 +1,8 @@
 use std::collections::BTreeSet;
 
-use crate::configuration::{Rule, Rules};
-
 use vermis::{Kind, Parts, TokenKind, Tree, View};
+
+use crate::configuration::{Rule, Rules};
 
 fn text<'source>(node: View<'_, '_>, source: &'source str) -> &'source str {
     &source[node.span().start..node.span().end]
