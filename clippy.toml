@@ -1,0 +1,2 @@
+# The syntax parser's dependency tree requires both rustc-hash versions.
+allowed-duplicate-crates = ["rustc-hash"]
