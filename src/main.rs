@@ -108,7 +108,7 @@ fn run() -> Result<(), String> {
     let paths: Vec<_> = env::args_os().skip(1).collect();
 
     if paths.is_empty() {
-        return Err("usage: breather <files.rs...>".into());
+        return Err("usage: breathers <files.rs...>".into());
     }
 
     let mut changes = Vec::new();

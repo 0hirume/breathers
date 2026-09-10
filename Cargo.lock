@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "breather"
+name = "breathers"
 version = "0.1.0"
 dependencies = [
  "ra_ap_syntax",

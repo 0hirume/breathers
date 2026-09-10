@@ -1,0 +1,76 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions: {}
+
+jobs:
+  check:
+    permissions:
+      contents: read
+    runs-on: ${{ matrix.system }}
+    strategy:
+      matrix:
+        system:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    steps:
+      - name: check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: set up rust
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          install_args: rust
+          cache: false
+
+      - name: check formatting, lints, and tests
+        run: mise run check
+
+  create:
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: create release
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          tag: ${{ github.ref_name }}
+        run: gh release create "$tag" --verify-tag --generate-notes --title "$tag"
+
+  upload:
+    needs: create
+    runs-on: ${{ matrix.system }}
+    strategy:
+      matrix:
+        system:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: set up rust
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          install_args: rust
+          cache: false
+
+      - name: build and upload binary
+        uses: taiki-e/upload-rust-binary-action@f0d45ae91ee7b8ee928de7a9d04d893a08bcbec6 # v1.30.2
+        with:
+          bin: breathers
+          locked: true

@@ -1,4 +1,15 @@
+[tasks.check]
+description = "check formatting, lints, and tests"
+run = ["cargo fmt --check", "cargo clippy --all-targets --locked", "cargo test --locked"]
+
+[tasks.build]
+description = "build the release binary"
+run = "cargo build --release --locked"
+
 [tools]
+"aqua:rhysd/actionlint" = "latest"
 "aqua:tombi-toml/tombi" = "latest"
+"github:zizmorcore/zizmor" = "latest"
+"npm:@actions/languageserver" = "latest"
 "npm:oxfmt" = "latest"
 rust = { version = "nightly", profile = "minimal", components = ["rust-analyzer", "rustfmt", "clippy"] }

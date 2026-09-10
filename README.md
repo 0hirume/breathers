@@ -2,26 +2,26 @@
 
 Give Rust code some breathing room. **breathers** plays on *breathers* and *breathe-rs*: breathe Rust.
 
-The `breather` binary inserts blank lines around control flow, blocks, and multiline statements while keeping consecutive simple statements together. It uses rust-analyzer's syntax parser and only inserts whitespace.
+Automatically add blank lines around control flow, blocks, and multiline statements. Keep consecutive simple statements together.
+
+## Install
+
+```sh
+cargo install --git https://github.com/0hirume/breathers --locked
+```
 
 ## Usage
 
-From this checkout, run rustfmt first, then pass explicit file paths:
+Run your usual Rust formatter, then pass the files you want to space:
 
 ```sh
-cargo fmt
-cargo run -- src/main.rs
+breathers src/main.rs
+breathers src/main.rs src/lib.rs
 ```
 
-Multiple files are accepted:
+Files are edited in place. Pass file paths, not directories.
 
-```sh
-cargo run -- src/main.rs src/lib.rs
-```
-
-Files are edited in place. Unchanged files are not written. All inputs are read and parsed before writing begins; a read or syntax error prevents any writes. Writes are sequential, not transactional: a write failure can leave earlier files updated.
-
-## Spacing
+## Example
 
 Before:
 
@@ -51,24 +51,12 @@ fn example() {
 }
 ```
 
-- Separates neighboring statements when either contains control flow, a block expression, or multiline whitespace.
-- Adds spacing only at existing line breaks between statements, including a block's final expression.
-- Keeps existing blank lines and leaves block edges alone.
-- Preserves comment text, string contents, macro token contents, and existing line endings.
+## Behavior
+
+- Adds space around `if`, `match`, loops, block expressions, and multiline statements.
+- Keeps simple statements together and leaves block edges alone.
+- Preserves existing blank lines, comment text, strings, and line endings.
+- Leaves compact single-line code and macro contents alone.
 - Repeated runs leave the result unchanged.
 
-## Limits
-
-Pass files explicitly; there is no directory traversal, standard-input mode, or check mode. Compact single-line code stays compact. Macro bodies are not expanded or formatted. Parsing uses the syntax parser's current Rust edition rather than reading Cargo manifests.
-
-## Development
-
-The mise manifest declares nightly Rust with rustfmt and Clippy.
-
-```sh
-cargo fmt --check
-cargo test --locked
-cargo clippy --all-targets --locked
-```
-
-Clippy permits duplicate versions of `rustc-hash` in the syntax parser's dependency tree. Other duplicate dependencies remain checked.
+Unreadable files and syntax errors stop the command before any files are written. A write failure can leave earlier files updated.

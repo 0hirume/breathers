@@ -1,12 +1,15 @@
 [package]
-name = "breather"
+name = "breathers"
 version = "0.1.0"
 edition = "2024"
-license = "MIT"
-description = "Give Rust code breathing room with automatic blank-line spacing"
+description = "Give rust code breathing room with automatic blank-line spacing"
 repository = "https://github.com/0hirume/breathers"
-keywords = ["rust", "formatter", "whitespace", "readability"]
+license = "MIT"
+keywords = ["formatter", "readability", "rust", "whitespace"]
 categories = ["command-line-utilities", "development-tools"]
+
+[dependencies]
+ra_ap_syntax = "0.0.351"
 
 [lints.clippy]
 all = { level = "deny", priority = -1 }
@@ -20,6 +23,3 @@ rust_2018_idioms = { level = "deny", priority = -1 }
 unsafe_code = "deny"
 unused = { level = "deny", priority = -1 }
 warnings = { level = "deny", priority = -1 }
-
-[dependencies]
-ra_ap_syntax = "0.0.351"
