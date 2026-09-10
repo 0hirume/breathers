@@ -1,12 +1,15 @@
 use std::{
     collections::BTreeSet,
     fs,
-    io::{self, Write},
+    io::{self, IsTerminal, Write},
     path::{Path, PathBuf},
     process::ExitCode,
+    time::{Duration, Instant},
 };
 
 use clap::{Parser, ValueEnum};
+use console::style;
+use indicatif::{ProgressBar, ProgressStyle};
 
 mod configuration;
 mod server;
@@ -178,11 +181,192 @@ fn collect(
     Ok(())
 }
 
-fn run() -> Result<(), String> {
+#[derive(Default)]
+struct Summary {
+    processed: usize,
+    changed: usize,
+    unchanged: usize,
+    failed: usize,
+}
+
+fn report(error: &str) {
+    eprintln!("{} {error}", style("error:").for_stderr().red().bold());
+}
+
+fn progress(progress: &ProgressBar, message: String) {
+    if progress.is_hidden() {
+        eprintln!("{message}");
+    }
+
+    progress.set_message(message);
+}
+
+fn process(
+    files: BTreeSet<PathBuf>,
+    language: Option<Language>,
+    configuration: &configuration::Configuration,
+    indicator: &ProgressBar,
+    summary: &mut Summary,
+    directory: &Path,
+) -> Result<(), String> {
+    let total = files.len();
+    let mut changes = Vec::new();
+
+    for path in files {
+        let name = path
+            .strip_prefix(directory)
+            .unwrap_or(&path)
+            .display()
+            .to_string();
+
+        summary.processed += 1;
+
+        progress(
+            indicator,
+            format!("Checking {}/{total}  {name}", summary.processed),
+        );
+
+        let source = fs::read_to_string(&path).map_err(|error| {
+            summary.failed += 1;
+
+            format!("{name}\n  {error}")
+        })?;
+
+        let language = language.or_else(|| Language::infer(&path)).ok_or_else(|| {
+            summary.failed += 1;
+
+            format!("{name}\n  Unknown language; specify --language (-l)")
+        })?;
+
+        let output = match language.breathe(&source, configuration) {
+            Ok(output) => output,
+
+            Err(error) => {
+                summary.failed += 1;
+
+                indicator.suspend(|| {
+                    report(&format!(
+                        "{name} (skipped)\n  {}",
+                        error.replace('\n', "\n  ")
+                    ));
+                });
+
+                continue;
+            }
+        };
+
+        if source == output {
+            summary.unchanged += 1;
+            indicator.suspend(|| eprintln!("{}  {name}", style("Unchanged").for_stderr().dim()));
+        } else {
+            changes.push((path, name, output));
+        }
+    }
+
+    let total = changes.len();
+
+    for (path, name, output) in changes {
+        progress(
+            indicator,
+            format!("Writing {}/{total}  {name}", summary.changed + 1),
+        );
+
+        fs::write(&path, output).map_err(|error| {
+            summary.failed += 1;
+
+            format!("{name}\n  {error}")
+        })?;
+
+        summary.changed += 1;
+        indicator.suspend(|| eprintln!("{}  {name}", style("Formatted").for_stderr().green()));
+    }
+
+    Ok(())
+}
+
+fn batch(
+    arguments: Arguments,
+    configuration: &configuration::Configuration,
+    selection: &configuration::Selection,
+) -> Result<ExitCode, String> {
+    let started = Instant::now();
+
+    let directory = std::env::current_dir()
+        .and_then(fs::canonicalize)
+        .map_err(|error| error.to_string())?;
+
+    let indicator = ProgressBar::new_spinner().with_style(
+        ProgressStyle::with_template("{spinner:.cyan} {msg}").map_err(|error| error.to_string())?,
+    );
+
+    progress(&indicator, "Scanning files...".into());
+
+    if !indicator.is_hidden() {
+        indicator.enable_steady_tick(Duration::from_millis(120));
+    }
+
+    let mut summary = Summary::default();
+
+    let result = (|| {
+        let mut files = BTreeSet::new();
+        let mut directories = BTreeSet::new();
+
+        for path in arguments.paths {
+            collect(&path, &mut files, &mut directories, selection)?;
+        }
+
+        process(
+            files,
+            arguments.language,
+            configuration,
+            &indicator,
+            &mut summary,
+            &directory,
+        )
+    })();
+
+    indicator.finish_and_clear();
+
+    if let Err(error) = &result {
+        report(error);
+        eprintln!("{}", style("Aborted").for_stderr().red());
+    }
+
+    let failures = style(summary.failed).for_stderr();
+
+    let failures = if summary.failed == 0 {
+        failures.dim()
+    } else {
+        failures.red()
+    };
+
+    eprintln!(
+        "{} processed · {} changed · {} unchanged · {} failed · {:?} elapsed",
+        summary.processed,
+        style(summary.changed).for_stderr().green(),
+        style(summary.unchanged).for_stderr().dim(),
+        failures,
+        style(started.elapsed()).for_stderr().cyan(),
+    );
+
+    let pending = summary.processed - summary.changed - summary.unchanged - summary.failed;
+
+    if pending > 0 {
+        eprintln!("{pending} prepared changes not written");
+    }
+
+    Ok(if result.is_ok() && summary.failed == 0 {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    })
+}
+
+fn run() -> Result<ExitCode, String> {
     let arguments = Arguments::parse();
 
     if arguments.server {
-        return server::run(arguments.config);
+        return server::run(arguments.config).map(|()| ExitCode::SUCCESS);
     }
 
     if arguments.schema {
@@ -192,7 +376,7 @@ fn run() -> Result<(), String> {
                 .map_err(|error| error.to_string())?
         );
 
-        return Ok(());
+        return Ok(ExitCode::SUCCESS);
     }
 
     let input_language = if arguments.paths.iter().any(|path| path.as_os_str() == "-") {
@@ -221,64 +405,23 @@ fn run() -> Result<(), String> {
         return output
             .write_all(formatted.as_bytes())
             .and_then(|()| output.flush())
+            .map(|()| ExitCode::SUCCESS)
             .map_err(|error| format!("stdout: {error}"));
     }
 
-    let mut files = BTreeSet::new();
-    let mut directories = BTreeSet::new();
-
-    for path in arguments.paths {
-        collect(&path, &mut files, &mut directories, &selection)?;
-    }
-
-    let mut changes = Vec::new();
-    let mut errors = Vec::new();
-
-    for path in files {
-        let source =
-            fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
-
-        let language = arguments
-            .language
-            .or_else(|| Language::infer(&path))
-            .ok_or_else(|| {
-                format!(
-                    "{}: unknown language; specify --language (-l)",
-                    path.display()
-                )
-            })?;
-
-        let output = match language.breathe(&source, &configuration) {
-            Ok(output) => output,
-
-            Err(error) => {
-                errors.push(format!("{}: {error}", path.display()));
-                continue;
-            }
-        };
-
-        if source != output {
-            changes.push((path, output));
-        }
-    }
-
-    for (path, output) in changes {
-        fs::write(&path, output).map_err(|error| format!("{}: {error}", path.display()))?;
-    }
-
-    if errors.is_empty() {
-        Ok(())
-    } else {
-        Err(errors.join("\n"))
-    }
+    batch(arguments, &configuration, &selection)
 }
 
 fn main() -> ExitCode {
+    if !io::stderr().is_terminal() || std::env::var_os("NO_COLOR").is_some() {
+        console::set_colors_enabled_stderr(false);
+    }
+
     match run() {
-        Ok(()) => ExitCode::SUCCESS,
+        Ok(status) => status,
 
         Err(error) => {
-            eprintln!("{error}");
+            report(&error);
 
             ExitCode::FAILURE
         }

@@ -832,6 +832,192 @@ fn detects_lua_and_luau_and_accepts_overrides() {
 }
 
 #[test]
+fn reports_batch_progress_and_summary() {
+    let root = std::env::temp_dir().join(format!(
+        "breathers-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+
+    fs::create_dir(&root).unwrap();
+    fs::write(root.join("breathers.toml"), "").unwrap();
+    let source = "local value = 1\nreturn value\n";
+    let expected = "local value = 1\n\nreturn value\n";
+    fs::write(root.join("changed.luau"), source).unwrap();
+    fs::write(root.join("unchanged.lua"), expected).unwrap();
+    fs::write(root.join("broken.rs"), "fn broken( {").unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_breathers"))
+        .current_dir(&root)
+        .env("CLICOLOR_FORCE", "1")
+        .output()
+        .unwrap();
+
+    assert!(!output.status.success());
+    assert_eq!(output.stdout, Vec::<u8>::new());
+    let feedback = String::from_utf8(output.stderr).unwrap();
+    assert!(feedback.starts_with("Scanning files...\n"));
+    assert!(feedback.contains("Checking 1/3  broken.rs"));
+    assert!(feedback.contains("Checking 3/3  unchanged.lua"));
+    assert!(feedback.contains("Unchanged  unchanged.lua"));
+    assert_eq!(feedback.matches("error: broken.rs (skipped)").count(), 1);
+    assert!(feedback.find("error:").unwrap() < feedback.find("Checking 2/3").unwrap());
+
+    assert!(
+        feedback.find("Writing 1/1").unwrap() < feedback.find("Formatted  changed.luau").unwrap()
+    );
+
+    assert!(feedback.contains("3 processed · 1 changed · 1 unchanged · 1 failed · "));
+    assert!(feedback.contains(" elapsed"));
+    assert!(!feedback.contains('\u{1b}'));
+    assert!(!feedback.contains('\r'));
+
+    assert_eq!(
+        fs::read_to_string(root.join("changed.luau")).unwrap(),
+        expected
+    );
+
+    assert_eq!(
+        fs::read_to_string(root.join("broken.rs")).unwrap(),
+        "fn broken( {"
+    );
+
+    fs::remove_file(root.join("broken.rs")).unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_breathers"))
+        .current_dir(&root)
+        .env("NO_COLOR", "1")
+        .env("CLICOLOR_FORCE", "1")
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let feedback = String::from_utf8(output.stderr).unwrap();
+    assert!(feedback.contains("2 processed · 0 changed · 2 unchanged · 0 failed · "));
+    assert!(!feedback.contains('\u{1b}'));
+    assert!(!feedback.contains("Formatted"));
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[cfg(windows)]
+#[test]
+fn reports_partial_writes_accurately() {
+    let root = std::env::temp_dir().join(format!(
+        "breathers-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+
+    fs::create_dir(&root).unwrap();
+    fs::write(root.join("breathers.toml"), "").unwrap();
+    let source = "local value = 1\nreturn value\n";
+
+    for name in ["first.luau", "second.luau", "third.luau"] {
+        fs::write(root.join(name), source).unwrap();
+    }
+
+    let path = root.join("second.luau");
+    let original = fs::metadata(&path).unwrap().permissions();
+    let mut permissions = original.clone();
+    permissions.set_readonly(true);
+    fs::set_permissions(&path, permissions).unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_breathers"))
+        .current_dir(&root)
+        .output()
+        .unwrap();
+
+    fs::set_permissions(&path, original).unwrap();
+    assert!(!output.status.success());
+    let feedback = String::from_utf8(output.stderr).unwrap();
+    assert!(feedback.contains("Formatted  first.luau"));
+    assert!(!feedback.contains("Formatted  second.luau"));
+    assert!(!feedback.contains("Formatted  third.luau"));
+    assert!(feedback.contains("error: second.luau"));
+    assert!(feedback.contains("3 processed · 1 changed · 0 unchanged · 1 failed · "));
+    assert!(feedback.contains("1 prepared changes not written"));
+
+    assert_eq!(
+        fs::read_to_string(root.join("first.luau")).unwrap(),
+        source.replace("\nreturn", "\n\nreturn")
+    );
+
+    assert_eq!(fs::read_to_string(&path).unwrap(), source);
+    assert_eq!(fs::read_to_string(root.join("third.luau")).unwrap(), source);
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn reports_empty_selection_and_unwritten_changes() {
+    let root = std::env::temp_dir().join(format!(
+        "breathers-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+
+    fs::create_dir(&root).unwrap();
+    fs::write(root.join("breathers.toml"), "include = []\n").unwrap();
+    let source = "local value = 1\nreturn value\n";
+    fs::write(root.join("changed.luau"), source).unwrap();
+    fs::write(root.join("unknown"), source).unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_breathers"))
+        .current_dir(&root)
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(output.stdout, Vec::<u8>::new());
+
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("0 processed · 0 changed · 0 unchanged · 0 failed · ")
+    );
+
+    fs::write(root.join("breathers.toml"), "").unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_breathers"))
+        .current_dir(&root)
+        .args(["changed.luau", "unknown"])
+        .output()
+        .unwrap();
+
+    assert!(!output.status.success());
+    assert_eq!(output.stdout, Vec::<u8>::new());
+    let feedback = String::from_utf8(output.stderr).unwrap();
+    assert!(feedback.contains("error: unknown\n  Unknown language"));
+    assert!(feedback.contains("Aborted"));
+    assert!(feedback.contains("2 processed · 0 changed · 0 unchanged · 1 failed · "));
+    assert!(feedback.contains("1 prepared changes not written"));
+    assert!(!feedback.contains("Formatted"));
+
+    assert_eq!(
+        fs::read_to_string(root.join("changed.luau")).unwrap(),
+        source
+    );
+
+    let output = Command::new(env!("CARGO_BIN_EXE_breathers"))
+        .current_dir(&root)
+        .arg("--schema")
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    assert_eq!(output.stderr, Vec::<u8>::new());
+    assert!(serde_json::from_slice::<serde_json::Value>(&output.stdout).is_ok());
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn formats_selected_files() {
     let root = std::env::temp_dir().join(format!(
         "breathers-{}-{}",
