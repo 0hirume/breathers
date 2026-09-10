@@ -9,6 +9,7 @@ keywords = ["formatter", "readability", "rust", "whitespace"]
 categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
+clap = { version = "4.6.6", features = ["derive"] }
 ra_ap_syntax = "0.0.351"
 
 [lints.clippy]

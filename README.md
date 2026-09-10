@@ -12,14 +12,18 @@ cargo install --git https://github.com/0hirume/breathers --locked
 
 ## Usage
 
-Run your usual Rust formatter, then pass the files you want to space:
+Run your usual Rust formatter, then choose what to space:
 
 ```sh
-breathers src/main.rs
-breathers src/main.rs src/lib.rs
+breathers                         # All Rust files under the current directory
+breathers src/                    # All Rust files under src
+breathers src/main.rs              # Only src/main.rs
+breathers src/main.rs src/lib.rs   # Multiple files
 ```
 
-Files are edited in place. Pass file paths, not directories.
+Files are edited in place. Directory searches include nested directories and select `.rs` files, skipping `.git`, `target`, and symbolic links. Overlapping paths are processed once. Explicit file paths are processed directly.
+
+Use `breathers --help` for help.
 
 ## Example
 

@@ -1,4 +1,11 @@
-use std::{collections::BTreeSet, env, fs, process::ExitCode};
+use std::{
+    collections::BTreeSet,
+    fs,
+    path::{Path, PathBuf},
+    process::ExitCode,
+};
+
+use clap::Parser;
 
 use ra_ap_syntax::{AstNode, Edition, SourceFile, SyntaxKind, SyntaxNode, ast};
 
@@ -104,18 +111,77 @@ fn breathe(source: &str) -> Result<String, String> {
     Ok(output)
 }
 
-fn run() -> Result<(), String> {
-    let paths: Vec<_> = env::args_os().skip(1).collect();
+#[derive(Parser)]
+/// Give Rust code breathing room.
+struct Arguments {
+    /// Rust files or directories to format recursively.
+    // An omitted path means the entire current directory.
+    #[arg(default_value = ".")]
+    paths: Vec<PathBuf>,
+}
 
-    if paths.is_empty() {
-        return Err("usage: breathers <files.rs...>".into());
+fn collect(
+    path: &Path,
+    files: &mut BTreeSet<PathBuf>,
+    directories: &mut BTreeSet<PathBuf>,
+) -> Result<(), String> {
+    let canonical =
+        fs::canonicalize(path).map_err(|error| format!("{}: {error}", path.display()))?;
+
+    let metadata =
+        fs::metadata(&canonical).map_err(|error| format!("{}: {error}", path.display()))?;
+
+    if metadata.is_dir() {
+        if !directories.insert(canonical.clone()) {
+            return Ok(());
+        }
+
+        for entry in
+            fs::read_dir(&canonical).map_err(|error| format!("{}: {error}", path.display()))?
+        {
+            let entry = entry.map_err(|error| format!("{}: {error}", path.display()))?;
+
+            let kind = entry
+                .file_type()
+                .map_err(|error| format!("{}: {error}", entry.path().display()))?;
+
+            if kind.is_symlink()
+                || (kind.is_dir() && matches!(entry.file_name().to_str(), Some(".git" | "target")))
+            {
+                continue;
+            }
+
+            if kind.is_dir()
+                || (kind.is_file()
+                    && entry
+                        .path()
+                        .extension()
+                        .is_some_and(|extension| extension == "rs"))
+            {
+                collect(&entry.path(), files, directories)?;
+            }
+        }
+    } else if metadata.is_file() {
+        files.insert(canonical);
+    } else {
+        return Err(format!("{}: expected a file or directory", path.display()));
+    }
+
+    Ok(())
+}
+
+fn run() -> Result<(), String> {
+    let arguments = Arguments::parse();
+    let mut files = BTreeSet::new();
+    let mut directories = BTreeSet::new();
+
+    for path in arguments.paths {
+        collect(&path, &mut files, &mut directories)?;
     }
 
     let mut changes = Vec::new();
 
-    for path in paths {
-        let path = std::path::PathBuf::from(path);
-
+    for path in files {
         let source =
             fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
 
@@ -145,7 +211,84 @@ fn main() -> ExitCode {
 
 #[cfg(test)]
 mod tests {
-    use super::breathe;
+    use super::{Arguments, breathe, collect};
+    use clap::Parser;
+    use std::{collections::BTreeSet, fs, path::PathBuf};
+
+    #[test]
+    fn discovers_rust_files_and_deduplicates_paths() {
+        let root = std::env::temp_dir().join(format!(
+            "breathers-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+
+        fs::create_dir(&root).unwrap();
+
+        for directory in ["src", "src/nested", "target", ".git"] {
+            fs::create_dir(root.join(directory)).unwrap();
+        }
+
+        for file in [
+            "root.rs",
+            "src/main.rs",
+            "src/nested/module.rs",
+            "src/notes.txt",
+            "target/generated.rs",
+            ".git/ignored.rs",
+        ] {
+            fs::write(root.join(file), "fn example() {}\n").unwrap();
+        }
+
+        let expected: BTreeSet<_> = ["root.rs", "src/main.rs", "src/nested/module.rs"]
+            .map(|path| fs::canonicalize(root.join(path)).unwrap())
+            .into_iter()
+            .collect();
+
+        let mut files = BTreeSet::new();
+        let mut directories = BTreeSet::new();
+        collect(&root, &mut files, &mut directories).unwrap();
+        collect(&root.join("src"), &mut files, &mut directories).unwrap();
+        collect(&root.join("src/main.rs"), &mut files, &mut directories).unwrap();
+        assert_eq!(files, expected);
+        files.clear();
+        directories.clear();
+        collect(&root.join("src"), &mut files, &mut directories).unwrap();
+        assert_eq!(files.len(), 2);
+        files.clear();
+        collect(&root.join("src/main.rs"), &mut files, &mut directories).unwrap();
+
+        assert_eq!(
+            files,
+            BTreeSet::from([fs::canonicalize(root.join("src/main.rs")).unwrap()])
+        );
+
+        assert!(collect(&root.join("missing"), &mut files, &mut directories).is_err());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn accepts_default_directory_file_and_multiple_paths() {
+        for (input, expected) in [
+            (vec!["breathers"], vec!["."]),
+            (vec!["breathers", "src/"], vec!["src/"]),
+            (vec!["breathers", "src/main.rs"], vec!["src/main.rs"]),
+            (
+                vec!["breathers", "src/", "main.rs"],
+                vec!["src/", "main.rs"],
+            ),
+        ] {
+            let parsed = Arguments::try_parse_from(input).unwrap();
+
+            assert_eq!(
+                parsed.paths,
+                expected.into_iter().map(PathBuf::from).collect::<Vec<_>>()
+            );
+        }
+    }
 
     #[test]
     fn spaces_statements_without_changing_tokens() {
