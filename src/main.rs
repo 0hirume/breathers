@@ -8,12 +8,17 @@ use std::{
 use clap::{Parser, ValueEnum};
 
 mod c;
+mod lua;
+mod luau;
 mod rust;
 mod spacing;
+mod syntax;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
 enum Language {
     Rust,
+    Lua,
+    Luau,
     C,
 
     #[value(name = "c++")]
@@ -24,6 +29,8 @@ impl Language {
     fn infer(path: &Path) -> Option<Self> {
         match path.extension()?.to_str()? {
             "rs" => Some(Self::Rust),
+            "luau" => Some(Self::Luau),
+            "lua" => Some(Self::Lua),
             "c" | "h" => Some(Self::C),
 
             "C" | "H" | "cc" | "cpp" | "cxx" | "c++" | "hh" | "hpp" | "hxx" | "h++" => {
@@ -37,6 +44,8 @@ impl Language {
     fn breathe(self, source: &str) -> Result<String, String> {
         match self {
             Self::Rust => rust::breathe(source),
+            Self::Luau => luau::breathe(source),
+            Self::Lua => lua::breathe(source),
             Self::C => c::breathe(source, &tree_sitter_c::LANGUAGE.into()),
             Self::CPlusPlus => c::breathe(source, &tree_sitter_cpp::LANGUAGE.into()),
         }
@@ -44,7 +53,7 @@ impl Language {
 }
 
 #[derive(Parser)]
-#[command(about = "Give Rust, C, and C++ code breathing room")]
+#[command(about = "Give Rust, Lua, Luau, C, and C++ code breathing room")]
 struct Arguments {
     #[arg(
         default_value = ".",
@@ -164,6 +173,7 @@ mod tests {
     fn selects_languages_and_accepts_shorthand() {
         for (path, expected) in [
             ("main.rs", Language::Rust),
+            ("main.luau", Language::Luau),
             ("main.c", Language::C),
             ("header.h", Language::C),
             ("main.cpp", Language::CPlusPlus),
@@ -178,6 +188,10 @@ mod tests {
         }
 
         assert_eq!(Language::infer(std::path::Path::new("unknown")), None);
+        assert_eq!(
+            Language::infer(std::path::Path::new("main.lua")),
+            Some(Language::Lua)
+        );
         assert!(Arguments::try_parse_from(["breathers", "-l", "unknown"]).is_err());
 
         assert_eq!(
@@ -190,6 +204,8 @@ mod tests {
                 ("rust", Language::Rust),
                 ("c", Language::C),
                 ("c++", Language::CPlusPlus),
+                ("luau", Language::Luau),
+                ("lua", Language::Lua),
             ] {
                 assert_eq!(
                     Arguments::try_parse_from(["breathers", flag, name, "header.h"])
@@ -201,6 +217,11 @@ mod tests {
         }
 
         for (language, source, expected) in [
+            (
+                Language::Luau,
+                "local value = 1\nreturn value\n",
+                "local value = 1\n\nreturn value\n",
+            ),
             (
                 Language::Rust,
                 "fn example() {\n    work();\n    result\n}\n",
