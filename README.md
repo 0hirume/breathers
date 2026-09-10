@@ -58,6 +58,9 @@ fn example() {
 ## Behavior
 
 - Adds space around `if`, `match`, loops, block expressions, and multiline statements.
+- Separates neighboring match arms or enum variants when either is multiline, keeping consecutive single-line entries together.
+- Separates neighboring struct fields when either has a multiline declaration.
+- Adds a blank line before a return or final expression when another statement precedes it.
 - Keeps simple statements together and leaves block edges alone.
 - Preserves existing blank lines, comment text, strings, and line endings.
 - Leaves compact single-line code and macro contents alone.

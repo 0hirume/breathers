@@ -9,6 +9,12 @@ use clap::Parser;
 
 use ra_ap_syntax::{AstNode, Edition, SourceFile, SyntaxKind, SyntaxNode, ast};
 
+fn multiline(node: &SyntaxNode) -> bool {
+    node.descendants_with_tokens().any(|element| {
+        element.kind() == SyntaxKind::WHITESPACE && element.to_string().contains('\n')
+    })
+}
+
 fn needs_spacing(statement: &SyntaxNode) -> bool {
     statement.descendants().any(|node| {
         matches!(
@@ -20,9 +26,7 @@ fn needs_spacing(statement: &SyntaxNode) -> bool {
                 | SyntaxKind::LOOP_EXPR
                 | SyntaxKind::BLOCK_EXPR
         )
-    }) || statement.descendants_with_tokens().any(|element| {
-        element.kind() == SyntaxKind::WHITESPACE && element.to_string().contains('\n')
-    })
+    }) || multiline(statement)
 }
 
 fn breathe(source: &str) -> Result<String, String> {
@@ -39,27 +43,49 @@ fn breathe(source: &str) -> Result<String, String> {
 
     let mut insertions = BTreeSet::new();
 
-    for block in parsed
-        .tree()
-        .syntax()
-        .descendants()
-        .filter_map(ast::StmtList::cast)
-    {
-        let statements: Vec<_> = block.syntax().children().collect();
+    for block in parsed.tree().syntax().descendants().filter(|node| {
+        matches!(
+            node.kind(),
+            SyntaxKind::STMT_LIST | SyntaxKind::MATCH_ARM_LIST | SyntaxKind::VARIANT_LIST
+        ) || (matches!(
+            node.kind(),
+            SyntaxKind::RECORD_FIELD_LIST | SyntaxKind::TUPLE_FIELD_LIST
+        ) && node
+            .parent()
+            .is_some_and(|parent| parent.kind() == SyntaxKind::STRUCT))
+    }) {
+        let statements: Vec<_> = block.children().collect();
 
         for pair in statements.windows(2) {
-            if !needs_spacing(&pair[0]) && !needs_spacing(&pair[1]) {
+            let separate = if block.kind() == SyntaxKind::STMT_LIST {
+                needs_spacing(&pair[0])
+                    || needs_spacing(&pair[1])
+                    || ast::Expr::can_cast(pair[1].kind())
+                    || pair[1]
+                        .children()
+                        .any(|node| node.kind() == SyntaxKind::RETURN_EXPR)
+            } else {
+                multiline(&pair[0]) || multiline(&pair[1])
+            };
+            if !separate {
                 continue;
             }
 
             let start = usize::from(pair[0].text_range().end());
-            let end = usize::from(pair[1].text_range().start());
+            let end = pair[1]
+                .descendants_with_tokens()
+                .filter_map(ra_ap_syntax::NodeOrToken::into_token)
+                .find(|token| !token.kind().is_trivia())
+                .map_or(usize::from(pair[1].text_range().start()), |token| {
+                    usize::from(token.text_range().start())
+                });
             let mut boundary = None;
             let mut already_spaced = false;
 
-            for element in std::iter::successors(pair[0].next_sibling_or_token(), |element| {
-                element.next_sibling_or_token()
-            })
+            for element in std::iter::successors(
+                pair[0].last_token().and_then(|token| token.next_token()),
+                ra_ap_syntax::SyntaxToken::next_token,
+            )
             .take_while(|element| usize::from(element.text_range().start()) < end)
             {
                 if element.kind() != SyntaxKind::WHITESPACE {
@@ -315,6 +341,99 @@ mod tests {
         }
 
         assert!(breathe("fn broken( {").is_err());
+    }
+
+    #[test]
+    fn spaces_multiline_struct_fields() {
+        let source = "struct Processor {\n    name: String,\n    enabled: bool,\n    callback: Box<\n        dyn Fn(&Request) -> Result<Response, Error>\n            + Send\n            + Sync,\n    >,\n    retries: usize,\n}\n";
+        let expected = source
+            .replace("    callback:", "\n    callback:")
+            .replace("    retries:", "\n    retries:");
+        assert_eq!(breathe(source).unwrap(), expected);
+        assert_eq!(breathe(&expected).unwrap(), expected);
+        assert_eq!(
+            breathe(&source.replace('\n', "\r\n")).unwrap(),
+            expected.replace('\n', "\r\n")
+        );
+        let source = "struct Tuple(\n    u32,\n    Box<\n        String,\n    >,\n    bool,\n);\n";
+        let expected = source
+            .replace("    Box<", "\n    Box<")
+            .replace("    bool,", "\n    bool,");
+        assert_eq!(breathe(source).unwrap(), expected);
+        for source in [
+            "struct Simple {\n    first: u32,\n    second: bool,\n}\n",
+            "struct Only {\n    value: Box<\n        String,\n    >,\n}\n",
+        ] {
+            assert_eq!(breathe(source).unwrap(), source);
+        }
+    }
+
+    #[test]
+    fn spaces_returns_and_final_expressions() {
+        for expression in [
+            "return result;",
+            "result",
+            "Ok(result)",
+            "return;",
+            "return result",
+        ] {
+            let source = format!(
+                "fn example() {{\n    let result = calculate();\n    save();\n    {expression}\n}}\n"
+            );
+            let expected = source.replace("    save();\n", "    save();\n\n");
+            assert_eq!(breathe(&source).unwrap(), expected);
+            assert_eq!(breathe(&expected).unwrap(), expected);
+        }
+        for source in [
+            "fn example() {\n    return result;\n}\n",
+            "fn example() {\n    result\n}\n",
+            "fn example() { first(); result }\n",
+            "fn example() {\n    first();\n    let callback = || return result;\n    finish();\n}\n",
+        ] {
+            assert_eq!(breathe(source).unwrap(), source);
+        }
+    }
+
+    #[test]
+    fn spaces_multiline_enum_variants() {
+        let source = "enum Example {\n    First,\n    Second(u32), // trailing\n    // attached\n    Record {\n        value: u32,\n    },\n    Tuple(\n        u32,\n        String,\n    ),\n    Last,\n}\n";
+        let expected = source
+            .replace("// trailing\n", "// trailing\n\n")
+            .replace("    },\n", "    },\n\n")
+            .replace("    ),\n", "    ),\n\n");
+        assert_eq!(breathe(source).unwrap(), expected);
+        assert_eq!(breathe(&expected).unwrap(), expected);
+        assert_eq!(
+            breathe(&source.replace('\n', "\r\n")).unwrap(),
+            expected.replace('\n', "\r\n")
+        );
+        for source in [
+            "enum Example { First, Second(u32), Record { value: u32 } }\n",
+            "enum Example {\n    First,\n    Second(u32),\n    Record { value: u32 },\n}\n",
+            "enum Example {\n    Record {\n        value: u32,\n    },\n}\n",
+        ] {
+            assert_eq!(breathe(source).unwrap(), source);
+        }
+    }
+
+    #[test]
+    fn spaces_multiline_match_arms() {
+        let source = "fn example() {\n    match kind {\n        Kind::First => 1,\n        Kind::Second => 2, // trailing\n        // attached\n        Kind::Index => Parts::Index {\n            receiver: children.next()?,\n            key: children.next()?,\n        },\n        Kind::Instantiate => Parts::Instantiate {\n            expression: children.next()?,\n            arguments: children.next()?,\n        },\n        Kind::Last => 3,\n    }\n}\n";
+        let expected = source
+            .replace("// trailing\n", "// trailing\n\n")
+            .replace("        },\n", "        },\n\n");
+        assert_eq!(breathe(source).unwrap(), expected);
+        assert_eq!(breathe(&expected).unwrap(), expected);
+        assert_eq!(
+            breathe(&source.replace('\n', "\r\n")).unwrap(),
+            expected.replace('\n', "\r\n")
+        );
+        for source in [
+            "fn example() {\n    match kind {\n        First => if ready() { 1 } else { 2 },\n        Second => { 3 },\n        _ => 4,\n    }\n}\n",
+            "fn example() {\n    match kind {\n        First => r#\"first\nsecond\"#,\n        _ => \"last\",\n    }\n}\n",
+        ] {
+            assert_eq!(breathe(source).unwrap(), source);
+        }
     }
 
     #[test]
