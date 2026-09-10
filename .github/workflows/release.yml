@@ -28,10 +28,13 @@ jobs:
     runs-on: ${{ matrix.system }}
     strategy:
       matrix:
-        system:
-          - ubuntu-latest
-          - macos-latest
-          - windows-latest
+        include:
+          - system: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - system: macos-latest
+            target: aarch64-apple-darwin
+          - system: windows-latest
+            target: x86_64-pc-windows-msvc
     permissions:
       contents: write
     steps:
@@ -50,4 +53,5 @@ jobs:
         uses: taiki-e/upload-rust-binary-action@f0d45ae91ee7b8ee928de7a9d04d893a08bcbec6 # v1.30.2
         with:
           bin: breathers
+          target: ${{ matrix.target }}
           locked: true
