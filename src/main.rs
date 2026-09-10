@@ -7,12 +7,20 @@ use std::{
 
 use clap::{Parser, ValueEnum};
 
-mod c;
-mod lua;
-mod luau;
-mod rust;
+mod configuration;
 mod spacing;
 mod syntax;
+
+mod languages {
+    pub mod c;
+    pub mod javascript;
+    pub mod lua;
+    pub mod luau;
+    pub mod python;
+    pub mod rust;
+}
+
+use languages::{c, javascript, lua, luau, python, rust};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
 enum Language {
@@ -20,6 +28,10 @@ enum Language {
     Lua,
     Luau,
     C,
+    Python,
+    Javascript,
+    Typescript,
+    Tsx,
 
     #[value(name = "c++")]
     CPlusPlus,
@@ -32,6 +44,10 @@ impl Language {
             "luau" => Some(Self::Luau),
             "lua" => Some(Self::Lua),
             "c" | "h" => Some(Self::C),
+            "py" | "pyi" => Some(Self::Python),
+            "js" | "jsx" | "mjs" | "cjs" => Some(Self::Javascript),
+            "ts" | "mts" | "cts" => Some(Self::Typescript),
+            "tsx" => Some(Self::Tsx),
 
             "C" | "H" | "cc" | "cpp" | "cxx" | "c++" | "hh" | "hpp" | "hxx" | "h++" => {
                 Some(Self::CPlusPlus)
@@ -41,19 +57,48 @@ impl Language {
         }
     }
 
-    fn breathe(self, source: &str) -> Result<String, String> {
+    fn breathe(
+        self,
+        source: &str,
+        configuration: &configuration::Configuration,
+    ) -> Result<String, String> {
         match self {
-            Self::Rust => rust::breathe(source),
-            Self::Luau => luau::breathe(source),
-            Self::Lua => lua::breathe(source),
-            Self::C => c::breathe(source, &tree_sitter_c::LANGUAGE.into()),
-            Self::CPlusPlus => c::breathe(source, &tree_sitter_cpp::LANGUAGE.into()),
+            Self::Rust => rust::breathe(source, &configuration.rust),
+            Self::Luau => luau::breathe(source, &configuration.luau),
+            Self::Lua => lua::breathe(source, &configuration.lua),
+            Self::C => c::breathe(source, &tree_sitter_c::LANGUAGE.into(), &configuration.c),
+
+            Self::CPlusPlus => c::breathe(
+                source,
+                &tree_sitter_cpp::LANGUAGE.into(),
+                &configuration.cplusplus,
+            ),
+
+            Self::Python => python::breathe(source, &configuration.python),
+
+            Self::Javascript => javascript::breathe(
+                source,
+                &tree_sitter_javascript::LANGUAGE.into(),
+                &configuration.javascript,
+            ),
+
+            Self::Typescript => javascript::breathe(
+                source,
+                &tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
+                &configuration.typescript,
+            ),
+
+            Self::Tsx => javascript::breathe(
+                source,
+                &tree_sitter_typescript::LANGUAGE_TSX.into(),
+                &configuration.typescript,
+            ),
         }
     }
 }
 
 #[derive(Parser)]
-#[command(about = "Give Rust, Lua, Luau, C, and C++ code breathing room")]
+#[command(about = "Give source code breathing room")]
 struct Arguments {
     #[arg(
         default_value = ".",
@@ -63,12 +108,22 @@ struct Arguments {
 
     #[arg(short, long, value_enum, help = "Override language detection")]
     language: Option<Language>,
+
+    #[arg(short, long, help = "Read configuration from this TOML file")]
+    config: Option<PathBuf>,
+
+    #[arg(
+        long,
+        help = "Print the configuration JSON Schema without formatting files"
+    )]
+    schema: bool,
 }
 
 fn collect(
     path: &Path,
     files: &mut BTreeSet<PathBuf>,
     directories: &mut BTreeSet<PathBuf>,
+    selection: &configuration::Selection,
 ) -> Result<(), String> {
     let canonical =
         fs::canonicalize(path).map_err(|error| format!("{}: {error}", path.display()))?;
@@ -77,7 +132,7 @@ fn collect(
         fs::metadata(&canonical).map_err(|error| format!("{}: {error}", path.display()))?;
 
     if metadata.is_dir() {
-        if !directories.insert(canonical.clone()) {
+        if selection.excluded_directory(&canonical) || !directories.insert(canonical.clone()) {
             return Ok(());
         }
 
@@ -90,18 +145,18 @@ fn collect(
                 .file_type()
                 .map_err(|error| format!("{}: {error}", entry.path().display()))?;
 
-            if kind.is_symlink()
-                || (kind.is_dir() && matches!(entry.file_name().to_str(), Some(".git" | "target")))
-            {
+            if kind.is_symlink() || (kind.is_dir() && entry.file_name() == ".git") {
                 continue;
             }
 
             if kind.is_dir() || (kind.is_file() && Language::infer(&entry.path()).is_some()) {
-                collect(&entry.path(), files, directories)?;
+                collect(&entry.path(), files, directories, selection)?;
             }
         }
     } else if metadata.is_file() {
-        files.insert(canonical);
+        if selection.includes(&canonical) {
+            files.insert(canonical);
+        }
     } else {
         return Err(format!("{}: expected a file or directory", path.display()));
     }
@@ -111,11 +166,25 @@ fn collect(
 
 fn run() -> Result<(), String> {
     let arguments = Arguments::parse();
+
+    if arguments.schema {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&schemars::schema_for!(configuration::Configuration))
+                .map_err(|error| error.to_string())?
+        );
+
+        return Ok(());
+    }
+
+    let (configuration, root) = configuration::Configuration::load(arguments.config.as_deref())?;
+    let selection = configuration::Selection::new(&configuration, root)?;
+
     let mut files = BTreeSet::new();
     let mut directories = BTreeSet::new();
 
     for path in arguments.paths {
-        collect(&path, &mut files, &mut directories)?;
+        collect(&path, &mut files, &mut directories, &selection)?;
     }
 
     let mut changes = Vec::new();
@@ -135,7 +204,7 @@ fn run() -> Result<(), String> {
             })?;
 
         let output = language
-            .breathe(&source)
+            .breathe(&source, &configuration)
             .map_err(|error| format!("{}: {error}", path.display()))?;
 
         if source != output {
@@ -165,7 +234,9 @@ fn main() -> ExitCode {
 #[cfg(test)]
 mod tests {
     use super::{Arguments, Language, collect};
-    use crate::rust::breathe;
+    fn breathe(source: &str) -> Result<String, String> {
+        crate::languages::rust::breathe(source, &crate::configuration::Rules::default())
+    }
     use clap::Parser;
     use std::{collections::BTreeSet, fs, path::PathBuf};
 
@@ -173,6 +244,16 @@ mod tests {
     fn selects_languages_and_accepts_shorthand() {
         for (path, expected) in [
             ("main.rs", Language::Rust),
+            ("main.py", Language::Python),
+            ("main.pyi", Language::Python),
+            ("main.js", Language::Javascript),
+            ("main.jsx", Language::Javascript),
+            ("main.mjs", Language::Javascript),
+            ("main.cjs", Language::Javascript),
+            ("main.ts", Language::Typescript),
+            ("main.mts", Language::Typescript),
+            ("main.cts", Language::Typescript),
+            ("main.tsx", Language::Tsx),
             ("main.luau", Language::Luau),
             ("main.c", Language::C),
             ("header.h", Language::C),
@@ -188,10 +269,12 @@ mod tests {
         }
 
         assert_eq!(Language::infer(std::path::Path::new("unknown")), None);
+
         assert_eq!(
             Language::infer(std::path::Path::new("main.lua")),
             Some(Language::Lua)
         );
+
         assert!(Arguments::try_parse_from(["breathers", "-l", "unknown"]).is_err());
 
         assert_eq!(
@@ -238,7 +321,12 @@ mod tests {
                 "int example() {\n    auto value = 1;\n\n    return value;\n}\n",
             ),
         ] {
-            assert_eq!(language.breathe(source).unwrap(), expected);
+            assert_eq!(
+                language
+                    .breathe(source, &crate::configuration::Configuration::default())
+                    .unwrap(),
+                expected
+            );
         }
     }
 
@@ -282,6 +370,7 @@ mod tests {
             "src/header.h",
             "src/main.cpp",
             "src/header.hpp",
+            "target/generated.rs",
         ]
         .map(|path| fs::canonicalize(root.join(path)).unwrap())
         .into_iter()
@@ -289,23 +378,54 @@ mod tests {
 
         let mut files = BTreeSet::new();
         let mut directories = BTreeSet::new();
-        collect(&root, &mut files, &mut directories).unwrap();
-        collect(&root.join("src"), &mut files, &mut directories).unwrap();
-        collect(&root.join("src/main.rs"), &mut files, &mut directories).unwrap();
+
+        let selection = crate::configuration::Selection::new(
+            &crate::configuration::Configuration::default(),
+            root.clone(),
+        )
+        .unwrap();
+
+        collect(&root, &mut files, &mut directories, &selection).unwrap();
+        collect(&root.join("src"), &mut files, &mut directories, &selection).unwrap();
+
+        collect(
+            &root.join("src/main.rs"),
+            &mut files,
+            &mut directories,
+            &selection,
+        )
+        .unwrap();
+
         assert_eq!(files, expected);
         files.clear();
         directories.clear();
-        collect(&root.join("src"), &mut files, &mut directories).unwrap();
+        collect(&root.join("src"), &mut files, &mut directories, &selection).unwrap();
         assert_eq!(files.len(), 6);
         files.clear();
-        collect(&root.join("src/main.rs"), &mut files, &mut directories).unwrap();
+
+        collect(
+            &root.join("src/main.rs"),
+            &mut files,
+            &mut directories,
+            &selection,
+        )
+        .unwrap();
 
         assert_eq!(
             files,
             BTreeSet::from([fs::canonicalize(root.join("src/main.rs")).unwrap()])
         );
 
-        assert!(collect(&root.join("missing"), &mut files, &mut directories).is_err());
+        assert!(
+            collect(
+                &root.join("missing"),
+                &mut files,
+                &mut directories,
+                &selection
+            )
+            .is_err()
+        );
+
         fs::remove_dir_all(root).unwrap();
     }
 

@@ -1,5 +1,7 @@
 use std::collections::BTreeSet;
 
+use crate::configuration::{Rule, Rules};
+
 use tree_sitter::{Language, Node, Parser};
 
 fn opaque(node: Node<'_>) -> bool {
@@ -17,22 +19,41 @@ fn multiline(node: Node<'_>, source: &str) -> bool {
     crate::syntax::multiline(node, source, opaque)
 }
 
-fn complex(node: Node<'_>, source: &str) -> bool {
-    matches!(
-        node.kind(),
-        "if_statement"
-            | "switch_statement"
-            | "for_statement"
-            | "for_range_loop"
-            | "while_statement"
-            | "do_statement"
-            | "compound_statement"
-            | "try_statement"
-            | "function_definition"
-    ) || multiline(node, source)
+fn complex(node: Node<'_>, source: &str, rules: &Rules) -> bool {
+    let block = match node.kind() {
+        "if_statement" => Some(Rule::Conditionals),
+        "switch_statement" => Some(Rule::Switches),
+        "for_statement" | "for_range_loop" => Some(Rule::ForLoops),
+        "while_statement" => Some(Rule::WhileLoops),
+        "do_statement" | "compound_statement" => Some(Rule::DoBlocks),
+        "try_statement" => Some(Rule::TryBlocks),
+        "function_definition" => Some(Rule::Functions),
+        _ => None,
+    };
+
+    if let Some(rule) = block {
+        rules.enabled(rule)
+    } else {
+        let rule = crate::syntax::rule(
+            node,
+            |node| match node.kind() {
+                "call_expression" => Some(Rule::Calls),
+                "initializer_list" => Some(Rule::Arrays),
+                _ => None,
+            },
+            opaque,
+        )
+        .unwrap_or(if node.kind() == "declaration" {
+            Rule::Declarations
+        } else {
+            Rule::Multiline
+        });
+
+        rules.enabled(rule) && multiline(node, source)
+    }
 }
 
-fn visit(node: Node<'_>, source: &str, insertions: &mut BTreeSet<usize>) {
+fn visit(node: Node<'_>, source: &str, insertions: &mut BTreeSet<usize>, rules: &Rules) {
     if opaque(node) || node.kind() == "call_expression" {
         return;
     }
@@ -66,17 +87,37 @@ fn visit(node: Node<'_>, source: &str, insertions: &mut BTreeSet<usize>) {
                 {
                     let separate =
                         if matches!(node.kind(), "field_declaration_list" | "enumerator_list") {
-                            multiline(left, source) || multiline(*child, source)
+                            let rule = if node.kind() == "enumerator_list" {
+                                Rule::EnumMembers
+                            } else if node
+                                .parent()
+                                .is_some_and(|parent| parent.kind() == "class_specifier")
+                            {
+                                Rule::ClassMembers
+                            } else {
+                                Rule::StructFields
+                            };
+
+                            rules.enabled(rule)
+                                && (multiline(left, source) || multiline(*child, source))
+                        } else if left.kind() == "case_statement"
+                            && child.kind() == "case_statement"
+                        {
+                            rules.enabled(Rule::SwitchCases)
+                                && (multiline(left, source) || multiline(*child, source))
                         } else {
-                            complex(left, source)
-                                || complex(*child, source)
-                                || matches!(
-                                    child.kind(),
-                                    "return_statement" | "co_return_statement"
-                                )
+                            complex(left, source, rules)
+                                || complex(*child, source, rules)
+                                || match child.kind() {
+                                    "return_statement" => rules.enabled(Rule::ReturnStatements),
+                                    "co_return_statement" => rules.enabled(Rule::CoroutineReturns),
+                                    _ => false,
+                                }
                         };
 
                     if separate
+                        && !(rules.enabled(Rule::Related)
+                            && crate::syntax::related(left, *child, source))
                         && let Some(offset) = crate::syntax::boundary(
                             source,
                             left.end_byte(),
@@ -94,11 +135,11 @@ fn visit(node: Node<'_>, source: &str, insertions: &mut BTreeSet<usize>) {
     }
 
     for child in children {
-        visit(child, source, insertions);
+        visit(child, source, insertions, rules);
     }
 }
 
-pub fn breathe(source: &str, language: &Language) -> Result<String, String> {
+pub fn breathe(source: &str, language: &Language, rules: &Rules) -> Result<String, String> {
     let mut parser = Parser::new();
 
     parser
@@ -112,14 +153,16 @@ pub fn breathe(source: &str, language: &Language) -> Result<String, String> {
     }
 
     let mut insertions = BTreeSet::new();
-    visit(tree.root_node(), source, &mut insertions);
+    visit(tree.root_node(), source, &mut insertions, rules);
 
     Ok(crate::spacing::apply(source, insertions))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::breathe;
+    fn breathe(source: &str, language: &tree_sitter::Language) -> Result<String, String> {
+        super::breathe(source, language, &crate::configuration::Rules::default())
+    }
 
     #[test]
     fn spaces_c_and_cplusplus_statements() {

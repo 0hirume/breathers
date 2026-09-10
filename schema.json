@@ -1,0 +1,929 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Configuration",
+  "description": "Source spacing configuration. Project keys override matching global keys; omitted keys inherit global settings, then built-in defaults.",
+  "type": "object",
+  "properties": {
+    "c": {
+      "description": "C spacing rules. Default: inherit global settings, then built-in defaults.",
+      "type": "object",
+      "properties": {
+        "arms": {
+          "description": "Separate multiline match arms and switch cases. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "arrays": {
+          "description": "Separate multiline array and sequence expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "blocks": {
+          "description": "Separate control flow and block declarations. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "calls": {
+          "description": "Separate multiline call expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "conditionals": {
+          "description": "Separate conditional statements and expressions. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "declarations": {
+          "description": "Separate multiline declarations not classified as calls, collections, or type aliases. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "do_blocks": {
+          "description": "Separate do blocks and do-while loops where supported. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "enum_members": {
+          "description": "Separate multiline C, C++, and TypeScript enum members. Inherits `variants`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "fields": {
+          "description": "Separate multiline fields, members, and dictionary entries. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "for_loops": {
+          "description": "Separate for loops. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "functions": {
+          "description": "Separate function declarations. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "groups": {
+          "description": "Separate Luau module groups. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "multiline": {
+          "description": "Separate other multiline statements. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "related": {
+          "description": "Keep adjacent variable dependencies together without removing existing blank lines. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": false
+        },
+        "return_statements": {
+          "description": "Insert a blank line before noninitial return statements. Inherits `returns`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "returns": {
+          "description": "Separate noninitial returns and Rust tail expressions. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "struct_fields": {
+          "description": "Separate multiline struct fields. Inherits `fields`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "switch_cases": {
+          "description": "Separate multiline switch cases. Inherits `arms`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "switches": {
+          "description": "Separate switch statements. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "variants": {
+          "description": "Separate multiline enum entries. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "while_loops": {
+          "description": "Separate while loops. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "c++": {
+      "description": "C++ spacing rules. Default: inherit global settings, then built-in defaults.",
+      "type": "object",
+      "properties": {
+        "arms": {
+          "description": "Separate multiline match arms and switch cases. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "arrays": {
+          "description": "Separate multiline array and sequence expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "blocks": {
+          "description": "Separate control flow and block declarations. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "calls": {
+          "description": "Separate multiline call expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "class_members": {
+          "description": "Separate multiline class members. Inherits `fields`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "conditionals": {
+          "description": "Separate conditional statements and expressions. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "coroutine_returns": {
+          "description": "Insert a blank line before noninitial C++ coroutine returns. Inherits `returns`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "declarations": {
+          "description": "Separate multiline declarations not classified as calls, collections, or type aliases. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "do_blocks": {
+          "description": "Separate do blocks and do-while loops where supported. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "enum_members": {
+          "description": "Separate multiline C, C++, and TypeScript enum members. Inherits `variants`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "fields": {
+          "description": "Separate multiline fields, members, and dictionary entries. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "for_loops": {
+          "description": "Separate for loops. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "functions": {
+          "description": "Separate function declarations. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "groups": {
+          "description": "Separate Luau module groups. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "multiline": {
+          "description": "Separate other multiline statements. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "related": {
+          "description": "Keep adjacent variable dependencies together without removing existing blank lines. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": false
+        },
+        "return_statements": {
+          "description": "Insert a blank line before noninitial return statements. Inherits `returns`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "returns": {
+          "description": "Separate noninitial returns and Rust tail expressions. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "struct_fields": {
+          "description": "Separate multiline struct fields. Inherits `fields`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "switch_cases": {
+          "description": "Separate multiline switch cases. Inherits `arms`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "switches": {
+          "description": "Separate switch statements. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "try_blocks": {
+          "description": "Separate try statements. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "variants": {
+          "description": "Separate multiline enum entries. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "while_loops": {
+          "description": "Separate while loops. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "exclude": {
+      "description": "Exclude files and directories matching these globs, using the same root as include. Default: inherit the global list, otherwise add no exclusions. An empty list clears inherited exclusions; directory searches still skip .git and symbolic links.",
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "include": {
+      "description": "Include files matching these globs, relative to the project configuration directory or current working directory. Default: inherit the global list, otherwise select all eligible files. An empty list selects none. Exclusions win.",
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "javascript": {
+      "description": "JavaScript and JSX spacing rules. Default: inherit global settings, then built-in defaults.",
+      "type": "object",
+      "properties": {
+        "arms": {
+          "description": "Separate multiline match arms and switch cases. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "arrays": {
+          "description": "Separate multiline array and sequence expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "blocks": {
+          "description": "Separate control flow and block declarations. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "calls": {
+          "description": "Separate multiline call expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "class_members": {
+          "description": "Separate multiline class members. Inherits `fields`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "classes": {
+          "description": "Separate class declarations. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "conditionals": {
+          "description": "Separate conditional statements and expressions. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "declarations": {
+          "description": "Separate multiline declarations not classified as calls, collections, or type aliases. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "do_blocks": {
+          "description": "Separate do blocks and do-while loops where supported. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "fields": {
+          "description": "Separate multiline fields, members, and dictionary entries. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "for_loops": {
+          "description": "Separate for loops. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "functions": {
+          "description": "Separate function declarations. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "groups": {
+          "description": "Separate Luau module groups. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "multiline": {
+          "description": "Separate other multiline statements. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "object_properties": {
+          "description": "Separate multiline JavaScript and TypeScript object properties. Inherits `fields`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "objects": {
+          "description": "Separate multiline object and dictionary expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "related": {
+          "description": "Keep adjacent variable dependencies together without removing existing blank lines. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": false
+        },
+        "return_statements": {
+          "description": "Insert a blank line before noninitial return statements. Inherits `returns`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "returns": {
+          "description": "Separate noninitial returns and Rust tail expressions. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "switch_cases": {
+          "description": "Separate multiline switch cases. Inherits `arms`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "switches": {
+          "description": "Separate switch statements. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "try_blocks": {
+          "description": "Separate try statements. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "variants": {
+          "description": "Separate multiline enum entries. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "while_loops": {
+          "description": "Separate while loops. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "with_blocks": {
+          "description": "Separate with statements. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "lua": {
+      "description": "Lua spacing rules. Default: inherit global settings, then built-in defaults.",
+      "type": "object",
+      "properties": {
+        "arms": {
+          "description": "Separate multiline match arms and switch cases. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "blocks": {
+          "description": "Separate control flow and block declarations. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "calls": {
+          "description": "Separate multiline call expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "conditionals": {
+          "description": "Separate conditional statements and expressions. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "declarations": {
+          "description": "Separate multiline declarations not classified as calls, collections, or type aliases. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "do_blocks": {
+          "description": "Separate do blocks and do-while loops where supported. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "fields": {
+          "description": "Separate multiline fields, members, and dictionary entries. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "for_loops": {
+          "description": "Separate for loops. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "functions": {
+          "description": "Separate function declarations. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "groups": {
+          "description": "Separate Luau module groups. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "multiline": {
+          "description": "Separate other multiline statements. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "related": {
+          "description": "Keep adjacent variable dependencies together without removing existing blank lines. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": false
+        },
+        "repeat_loops": {
+          "description": "Separate repeat-until loops. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "return_statements": {
+          "description": "Insert a blank line before noninitial return statements. Inherits `returns`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "returns": {
+          "description": "Separate noninitial returns and Rust tail expressions. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "tables": {
+          "description": "Separate multiline Lua and Luau table expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "variants": {
+          "description": "Separate multiline enum entries. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "while_loops": {
+          "description": "Separate while loops. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "luau": {
+      "description": "Luau spacing and module-grouping rules. Default: inherit global settings, then built-in defaults.",
+      "type": "object",
+      "properties": {
+        "arms": {
+          "description": "Separate multiline match arms and switch cases. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "blocks": {
+          "description": "Separate control flow and block declarations. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "calls": {
+          "description": "Separate multiline call expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "class_groups": {
+          "description": "Separate Luau class groups from other module groups. Inherits `groups`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "classes": {
+          "description": "Separate class declarations. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "conditionals": {
+          "description": "Separate conditional statements and expressions. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "declarations": {
+          "description": "Separate multiline declarations not classified as calls, collections, or type aliases. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "do_blocks": {
+          "description": "Separate do blocks and do-while loops where supported. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "fields": {
+          "description": "Separate multiline fields, members, and dictionary entries. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "for_loops": {
+          "description": "Separate for loops. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "functions": {
+          "description": "Separate function declarations. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "groups": {
+          "description": "Separate Luau module groups. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "multiline": {
+          "description": "Separate other multiline statements. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "populated_declarations": {
+          "description": "Separate Luau declarations populated by following field or index assignments. Inherits `groups`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "related": {
+          "description": "Keep adjacent variable dependencies together without removing existing blank lines. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": false
+        },
+        "repeat_loops": {
+          "description": "Separate repeat-until loops. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "requires": {
+          "description": "Separate Luau require groups by module path prefix. Inherits `groups`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "return_statements": {
+          "description": "Insert a blank line before noninitial return statements. Inherits `returns`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "returns": {
+          "description": "Separate noninitial returns and Rust tail expressions. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "services": {
+          "description": "Separate Luau service groups from other module groups. Inherits `groups`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "tables": {
+          "description": "Separate multiline Lua and Luau table expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "type_aliases": {
+          "description": "Separate multiline type aliases. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "type_groups": {
+          "description": "Separate imported, local, and exported Luau type groups. Inherits `groups`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "variants": {
+          "description": "Separate multiline enum entries. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "while_loops": {
+          "description": "Separate while loops. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "python": {
+      "description": "Python spacing rules. Default: inherit global settings, then built-in defaults.",
+      "type": "object",
+      "properties": {
+        "arms": {
+          "description": "Separate multiline match arms and switch cases. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "arrays": {
+          "description": "Separate multiline array and sequence expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "blocks": {
+          "description": "Separate control flow and block declarations. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "calls": {
+          "description": "Separate multiline call expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "classes": {
+          "description": "Separate class declarations. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "conditionals": {
+          "description": "Separate conditional statements and expressions. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "declarations": {
+          "description": "Separate multiline declarations not classified as calls, collections, or type aliases. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "decorated_functions": {
+          "description": "Separate decorated Python functions. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "dictionary_entries": {
+          "description": "Separate multiline Python dictionary entries. Inherits `fields`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "fields": {
+          "description": "Separate multiline fields, members, and dictionary entries. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "for_loops": {
+          "description": "Separate for loops. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "functions": {
+          "description": "Separate function declarations. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "groups": {
+          "description": "Separate Luau module groups. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "match_cases": {
+          "description": "Separate multiline Python match cases. Inherits `arms`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "matches": {
+          "description": "Separate match statements and expressions. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "multiline": {
+          "description": "Separate other multiline statements. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "objects": {
+          "description": "Separate multiline object and dictionary expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "related": {
+          "description": "Keep adjacent variable dependencies together without removing existing blank lines. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": false
+        },
+        "return_statements": {
+          "description": "Insert a blank line before noninitial return statements. Inherits `returns`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "returns": {
+          "description": "Separate noninitial returns and Rust tail expressions. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "try_blocks": {
+          "description": "Separate try statements. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "type_aliases": {
+          "description": "Separate multiline type aliases. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "variants": {
+          "description": "Separate multiline enum entries. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "while_loops": {
+          "description": "Separate while loops. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "with_blocks": {
+          "description": "Separate with statements. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "rust": {
+      "description": "Rust spacing rules. Default: inherit global settings, then built-in defaults.",
+      "type": "object",
+      "properties": {
+        "arms": {
+          "description": "Separate multiline match arms and switch cases. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "arrays": {
+          "description": "Separate multiline array and sequence expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "block_expressions": {
+          "description": "Separate Rust block expressions. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "blocks": {
+          "description": "Separate control flow and block declarations. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "calls": {
+          "description": "Separate multiline call expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "conditionals": {
+          "description": "Separate conditional statements and expressions. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "declarations": {
+          "description": "Separate multiline declarations not classified as calls, collections, or type aliases. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "enum_variants": {
+          "description": "Separate multiline Rust enum variants. Inherits `variants`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "fields": {
+          "description": "Separate multiline fields, members, and dictionary entries. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "for_loops": {
+          "description": "Separate for loops. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "functions": {
+          "description": "Separate function declarations. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "groups": {
+          "description": "Separate Luau module groups. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "loop_expressions": {
+          "description": "Separate Rust loop expressions. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "match_arms": {
+          "description": "Separate multiline Rust match arms. Inherits `arms`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "matches": {
+          "description": "Separate match statements and expressions. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "multiline": {
+          "description": "Separate other multiline statements. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "related": {
+          "description": "Keep adjacent variable dependencies together without removing existing blank lines. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": false
+        },
+        "return_statements": {
+          "description": "Insert a blank line before noninitial return statements. Inherits `returns`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "returns": {
+          "description": "Separate noninitial returns and Rust tail expressions. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "struct_fields": {
+          "description": "Separate multiline struct fields. Inherits `fields`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "tail_expressions": {
+          "description": "Insert a blank line before noninitial Rust tail expressions. Inherits `returns`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "tuple_fields": {
+          "description": "Separate multiline Rust tuple-struct fields. Inherits `fields`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "type_aliases": {
+          "description": "Separate multiline type aliases. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "variants": {
+          "description": "Separate multiline enum entries. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "while_loops": {
+          "description": "Separate while loops. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "typescript": {
+      "description": "TypeScript and TSX spacing rules. Default: inherit global settings, then built-in defaults.",
+      "type": "object",
+      "properties": {
+        "arms": {
+          "description": "Separate multiline match arms and switch cases. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "arrays": {
+          "description": "Separate multiline array and sequence expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "blocks": {
+          "description": "Separate control flow and block declarations. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "calls": {
+          "description": "Separate multiline call expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "class_members": {
+          "description": "Separate multiline class members. Inherits `fields`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "classes": {
+          "description": "Separate class declarations. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "conditionals": {
+          "description": "Separate conditional statements and expressions. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "declarations": {
+          "description": "Separate multiline declarations not classified as calls, collections, or type aliases. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "do_blocks": {
+          "description": "Separate do blocks and do-while loops where supported. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "enum_members": {
+          "description": "Separate multiline C, C++, and TypeScript enum members. Inherits `variants`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "fields": {
+          "description": "Separate multiline fields, members, and dictionary entries. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "for_loops": {
+          "description": "Separate for loops. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "functions": {
+          "description": "Separate function declarations. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "groups": {
+          "description": "Separate Luau module groups. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "interface_members": {
+          "description": "Separate multiline TypeScript interface members. Inherits `fields`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "interfaces": {
+          "description": "Separate TypeScript interface declarations. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "multiline": {
+          "description": "Separate other multiline statements. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "object_properties": {
+          "description": "Separate multiline JavaScript and TypeScript object properties. Inherits `fields`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "objects": {
+          "description": "Separate multiline object and dictionary expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "related": {
+          "description": "Keep adjacent variable dependencies together without removing existing blank lines. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": false
+        },
+        "return_statements": {
+          "description": "Insert a blank line before noninitial return statements. Inherits `returns`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "returns": {
+          "description": "Separate noninitial returns and Rust tail expressions. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "switch_cases": {
+          "description": "Separate multiline switch cases. Inherits `arms`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "switches": {
+          "description": "Separate switch statements. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "try_blocks": {
+          "description": "Separate try statements. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "type_aliases": {
+          "description": "Separate multiline type aliases. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "type_members": {
+          "description": "Separate multiline TypeScript object-type members. Inherits `fields`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "variants": {
+          "description": "Separate multiline enum entries. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "while_loops": {
+          "description": "Separate while loops. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "with_blocks": {
+          "description": "Separate with statements. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,1 +1,1 @@
-allowed-duplicate-crates = ["rustc-hash"]
+allowed-duplicate-crates = ["hashbrown", "rustc-hash", "winnow"]
