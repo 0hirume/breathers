@@ -1,6 +1,6 @@
 [package]
 name = "breathers"
-version = "0.2.2"
+version = "0.3.0"
 edition = "2024"
 description = "Give rust code breathing room with automatic blank-line spacing"
 repository = "https://github.com/0hirume/breathers"
