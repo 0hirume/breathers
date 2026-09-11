@@ -202,7 +202,7 @@ impl Backend {
         }
 
         let formatted = language
-            .breathe(source, &configuration)
+            .format(source, &configuration, path.as_deref())
             .map_err(Error::invalid_params)?;
 
         if formatted == source {

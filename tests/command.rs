@@ -4,6 +4,25 @@ use std::{
     process::{Command, Output, Stdio},
 };
 
+fn directory() -> std::path::PathBuf {
+    loop {
+        let root = std::env::temp_dir().join(format!(
+            "breathers-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+
+        match fs::create_dir(&root) {
+            Ok(()) => return root,
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
+            Err(error) => panic!("{}: {error}", root.display()),
+        }
+    }
+}
+
 fn input(root: &std::path::Path, arguments: &[&str], source: &[u8]) -> Output {
     let mut child = Command::new(env!("CARGO_BIN_EXE_breathers"))
         .current_dir(root)
@@ -86,19 +105,83 @@ fn protocol(
 }
 
 #[test]
+fn formats_cplusplus_with_clangd_flags_and_buffer_contents() {
+    use serde_json::json;
+    use tower_lsp_server::ls_types::Uri;
+
+    let root = directory();
+    fs::create_dir_all(root.join("bridge")).unwrap();
+    fs::create_dir(root.join("include")).unwrap();
+    fs::write(root.join("breathers.toml"), "").unwrap();
+
+    fs::write(
+        root.join(".clangd"),
+        "If:\n  PathMatch: bridge/.*\nCompileFlags:\n  Add: [-std=c++17, -I../include]\n",
+    )
+    .unwrap();
+
+    fs::write(
+        root.join("bridge/.clangd"),
+        "CompileFlags:\n  Add: -DENABLED\n",
+    )
+    .unwrap();
+
+    fs::write(root.join("include/value.hpp"), "#ifndef ENABLED\n#error missing compiler flag\n#endif\n#define CHANGE(value) do { if (value) { ++value; } } while (0)\nstruct Value { Value() = default; };\n").unwrap();
+
+    let source = "#include <value.hpp>\nint example(Value parent = {}) {\n    int first = 1;\n    CHANGE(first);\n    return first;\n}\n";
+    let expected = source.replace("    return", "\n    return");
+    let path = root.join("bridge/source.cpp");
+    fs::write(&path, source).unwrap();
+    let uri = Uri::from_file_path(&path).unwrap();
+    let buffer = source.replace("first", "second");
+
+    let responses = protocol(
+        &root,
+        &["--lsp"],
+        &[
+            json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"capabilities":{}}}),
+            json!({"jsonrpc":"2.0","method":"initialized","params":{}}),
+            json!({"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":uri,"languageId":"cpp","version":1,"text":buffer}}}),
+            json!({"jsonrpc":"2.0","id":2,"method":"textDocument/formatting","params":{"textDocument":{"uri":uri},"options":{"tabSize":4,"insertSpaces":true}}}),
+            json!({"jsonrpc":"2.0","id":3,"method":"shutdown"}),
+            json!({"jsonrpc":"2.0","method":"exit"}),
+        ],
+    );
+
+    assert_eq!(
+        responses[&2]["result"][0]["newText"],
+        expected.replace("first", "second"),
+        "{}",
+        responses[&2]
+    );
+
+    assert_eq!(fs::read_to_string(&path).unwrap(), source);
+
+    for _ in 0..2 {
+        let output = input(&root, &["bridge/source.cpp"], b"");
+
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+
+        assert_eq!(fs::read_to_string(&path).unwrap(), expected);
+    }
+
+    fs::write(root.join("bridge/.clangd"), "CompileFlags: [broken").unwrap();
+    let output = input(&root, &["bridge/source.cpp"], b"");
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains(".clangd"));
+    assert_eq!(fs::read_to_string(&path).unwrap(), expected);
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn serves_nushell_formatting() {
     use serde_json::json;
 
-    let root = std::env::temp_dir().join(format!(
-        "breathers-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    ));
-
-    fs::create_dir(&root).unwrap();
+    let root = directory();
     fs::write(root.join("breathers.toml"), "").unwrap();
     let source = "print ready\nreturn done\n";
 
@@ -134,16 +217,7 @@ fn serves_document_formatting_with_buffer_synchronization() {
     use serde_json::json;
     use tower_lsp_server::ls_types::Uri;
 
-    let root = std::env::temp_dir()
-        .join("breathers")
-        .join(std::process::id().to_string())
-        .join(
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-                .to_string(),
-        );
+    let root = directory();
 
     let project = root.join("project");
     fs::create_dir_all(project.join("src/generated")).unwrap();
@@ -243,16 +317,7 @@ fn serves_document_formatting_with_buffer_synchronization() {
 fn applies_explicit_server_configuration_and_rejects_mixed_modes() {
     use serde_json::json;
 
-    let root = std::env::temp_dir()
-        .join("breathers")
-        .join(std::process::id().to_string())
-        .join(
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-                .to_string(),
-        );
+    let root = directory();
 
     fs::create_dir_all(root.join("nested")).unwrap();
 
@@ -326,18 +391,7 @@ fn applies_explicit_server_configuration_and_rejects_mixed_modes() {
 
 #[test]
 fn formats_standard_input_without_writing_files() {
-    let root = std::env::temp_dir()
-        .join("breathers")
-        .join(std::process::id().to_string())
-        .join(
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-                .to_string(),
-        );
-
-    fs::create_dir_all(&root).unwrap();
+    let root = directory();
     let untouched = "local value = 1\nreturn value\n";
     fs::write(root.join("untouched.luau"), untouched).unwrap();
 
@@ -429,18 +483,7 @@ fn formats_standard_input_without_writing_files() {
 
 #[test]
 fn rejects_invalid_standard_input_without_output_or_file_changes() {
-    let root = std::env::temp_dir()
-        .join("breathers")
-        .join(std::process::id().to_string())
-        .join(
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-                .to_string(),
-        );
-
-    fs::create_dir_all(&root).unwrap();
+    let root = directory();
     let source = "local value = 1\nreturn value\n";
     fs::write(root.join("untouched.luau"), source).unwrap();
     fs::write(root.join("breathers.toml"), "").unwrap();
@@ -494,16 +537,7 @@ fn rejects_invalid_standard_input_without_output_or_file_changes() {
 
 #[test]
 fn discovers_new_languages_and_loads_configuration_before_writing() {
-    let root = std::env::temp_dir().join(format!(
-        "breathers-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    ));
-
-    fs::create_dir(&root).unwrap();
+    let root = directory();
 
     let sources = [
         ("example.py", "def example():\n    work()\n    return 1\n"),
@@ -646,16 +680,7 @@ fn reject_invalid_configuration(root: &std::path::Path, sources: &[(&str, &str)]
 
 #[test]
 fn filters_discovered_and_explicit_files_from_the_project_root() {
-    let root = std::env::temp_dir()
-        .join("breathers")
-        .join(std::process::id().to_string())
-        .join(
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-                .to_string(),
-        );
+    let root = directory();
 
     let sources = root.join("src");
     fs::create_dir_all(sources.join("generated")).unwrap();
@@ -723,16 +748,7 @@ fn filters_discovered_and_explicit_files_from_the_project_root() {
 
 #[test]
 fn detects_lua_and_luau_and_accepts_overrides() {
-    let root = std::env::temp_dir().join(format!(
-        "breathers-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    ));
-
-    fs::create_dir(&root).unwrap();
+    let root = directory();
     fs::create_dir(root.join("src")).unwrap();
     let source = "local value = 1\nreturn value\n";
     let expected = "local value = 1\n\nreturn value\n";
@@ -833,16 +849,7 @@ fn detects_lua_and_luau_and_accepts_overrides() {
 
 #[test]
 fn reports_batch_progress_and_summary() {
-    let root = std::env::temp_dir().join(format!(
-        "breathers-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    ));
-
-    fs::create_dir(&root).unwrap();
+    let root = directory();
     fs::write(root.join("breathers.toml"), "").unwrap();
     let source = "local value = 1\nreturn value\n";
     let expected = "local value = 1\n\nreturn value\n";
@@ -905,16 +912,7 @@ fn reports_batch_progress_and_summary() {
 #[cfg(windows)]
 #[test]
 fn reports_partial_writes_accurately() {
-    let root = std::env::temp_dir().join(format!(
-        "breathers-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    ));
-
-    fs::create_dir(&root).unwrap();
+    let root = directory();
     fs::write(root.join("breathers.toml"), "").unwrap();
     let source = "local value = 1\nreturn value\n";
 
@@ -955,16 +953,7 @@ fn reports_partial_writes_accurately() {
 
 #[test]
 fn reports_empty_selection_and_unwritten_changes() {
-    let root = std::env::temp_dir().join(format!(
-        "breathers-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    ));
-
-    fs::create_dir(&root).unwrap();
+    let root = directory();
     fs::write(root.join("breathers.toml"), "include = []\n").unwrap();
     let source = "local value = 1\nreturn value\n";
     fs::write(root.join("changed.luau"), source).unwrap();
@@ -1019,16 +1008,7 @@ fn reports_empty_selection_and_unwritten_changes() {
 
 #[test]
 fn formats_selected_files() {
-    let root = std::env::temp_dir().join(format!(
-        "breathers-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    ));
-
-    fs::create_dir(&root).unwrap();
+    let root = directory();
     fs::create_dir(root.join("src")).unwrap();
     fs::create_dir(root.join("target")).unwrap();
     let source = "int example(void) {\n    work();\n    return 1;\n}\n";
@@ -1095,16 +1075,7 @@ fn formats_selected_files() {
 
 #[test]
 fn formats_valid_files_and_reports_syntax_errors() {
-    let root = std::env::temp_dir().join(format!(
-        "breathers-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    ));
-
-    fs::create_dir(&root).unwrap();
+    let root = directory();
     let source = "int example(void) {\n    work();\n    return 1;\n}\n";
     let expected = source.replace("    return", "\n    return");
 

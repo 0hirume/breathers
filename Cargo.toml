@@ -10,14 +10,17 @@ categories = ["command-line-utilities", "development-tools"]
 publish = false
 
 [dependencies]
+clang = { version = "2.1.0", features = ["runtime"] }
 clap = { version = "4.6.6", features = ["derive"] }
 console = "0.16.6"
 dirs = "7.0.0"
 globset = "0.4.20"
 indicatif = "0.18.6"
 ra_ap_syntax = "0.0.351"
+regex = "1.13.1"
 schemars = "1.2.2"
 serde = { version = "1.0.229", features = ["derive"] }
+serde-saphyr = "1.2.0"
 serde_json = "1.0.151"
 tokio = { version = "1.53.1", features = ["rt", "io-std"] }
 toml = "1.1.5"

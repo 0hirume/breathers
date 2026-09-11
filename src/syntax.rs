@@ -437,12 +437,20 @@ pub fn related(previous: Node<'_>, next: Node<'_>, source: &str) -> bool {
 }
 
 pub fn boundary(source: &str, start: usize, end: usize, comments: &[Node<'_>]) -> Option<usize> {
+    boundary_ranges(source, start, end, comments.iter().map(Node::byte_range))
+}
+
+pub fn boundary_ranges(
+    source: &str,
+    start: usize,
+    end: usize,
+    comments: impl Iterator<Item = std::ops::Range<usize>>,
+) -> Option<usize> {
     let mut position = start;
     let mut boundary = None;
 
     for (stop, next) in comments
-        .iter()
-        .map(|node| (node.start_byte(), node.end_byte()))
+        .map(|range| (range.start, range.end))
         .chain(std::iter::once((end, end)))
     {
         let gap = &source[position..stop];

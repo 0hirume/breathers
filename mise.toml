@@ -8,5 +8,6 @@ run = "cargo build --release --locked"
 
 [tools]
 "aqua:tombi-toml/tombi" = "latest"
+"github:llvm/llvm-project" = "latest"
 "npm:oxfmt" = "latest"
 rust = { version = "nightly", profile = "minimal", components = ["rust-analyzer", "rustfmt", "clippy"] }

@@ -60,6 +60,14 @@ Start the formatting language server over stdio:
 breathers --lsp
 ```
 
+## C++
+
+C++ formatting uses LLVM's `libclang`, loaded at runtime. Make the shared library discoverable or set `LIBCLANG_PATH` to its directory. Other languages do not require it.
+
+Compiler flags come from ancestor `.clangd` files, applied from parent to child. Supported settings are `CompileFlags.Add`, `If.PathMatch`, and `If.PathExclude`, including multiple YAML documents. Conditions match paths relative to their `.clangd` directory; relative include paths use the source file's directory. Other `CompileFlags` settings produce an error. Stdin uses `source.cpp` in the working directory for this discovery; LSP uses the document path and buffer contents.
+
+Tree-sitter remains a syntax-only fallback when Clang reports errors, preserving formatting for snippets with unresolved names. If both parsers reject the source, Clang diagnostics are reported and the file is left unchanged.
+
 ## Configuration
 
 Settings come from the nearest `breathers.toml` above the working directory, layered over global settings. For LSP file documents, discovery starts from the document's directory. Use `-c` / `--config` to select a project configuration explicitly.

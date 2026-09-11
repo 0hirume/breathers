@@ -11,6 +11,7 @@ use clap::{Parser, ValueEnum};
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 
+mod compilation;
 mod configuration;
 mod server;
 mod spacing;
@@ -18,6 +19,7 @@ mod syntax;
 
 mod languages {
     pub mod c;
+    pub mod cplusplus;
     pub mod javascript;
     pub mod lua;
     pub mod luau;
@@ -26,7 +28,7 @@ mod languages {
     pub mod rust;
 }
 
-use languages::{c, javascript, lua, luau, nushell, python, rust};
+use languages::{c, cplusplus, javascript, lua, luau, nushell, python, rust};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
 enum Language {
@@ -70,17 +72,22 @@ impl Language {
         source: &str,
         configuration: &configuration::Configuration,
     ) -> Result<String, String> {
+        self.format(source, configuration, None)
+    }
+
+    fn format(
+        self,
+        source: &str,
+        configuration: &configuration::Configuration,
+        path: Option<&Path>,
+    ) -> Result<String, String> {
         match self {
             Self::Rust => rust::breathe(source, &configuration.rust),
             Self::Luau => luau::breathe(source, &configuration.luau),
             Self::Lua => lua::breathe(source, &configuration.lua),
             Self::C => c::breathe(source, &tree_sitter_c::LANGUAGE.into(), &configuration.c),
 
-            Self::CPlusPlus => c::breathe(
-                source,
-                &tree_sitter_cpp::LANGUAGE.into(),
-                &configuration.cplusplus,
-            ),
+            Self::CPlusPlus => cplusplus::breathe(source, path, &configuration.cplusplus),
 
             Self::Python => python::breathe(source, &configuration.python),
             Self::Nushell => nushell::breathe(source, &configuration.nushell),
@@ -238,7 +245,7 @@ fn process(
             format!("{name}\n  Unknown language; specify --language (-l)")
         })?;
 
-        let output = match language.breathe(&source, configuration) {
+        let output = match language.format(&source, configuration, Some(&path)) {
             Ok(output) => output,
 
             Err(error) => {
