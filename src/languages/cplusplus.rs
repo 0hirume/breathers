@@ -291,6 +291,37 @@ impl Formatter<'_, '_> {
             .filter(|offset| !self.macros.iter().any(|range| range.contains(offset)))
     }
 
+    fn space_first_statement(&mut self, entity: Entity<'_>, child: Entity<'_>) {
+        if entity.get_kind() != EntityKind::CompoundStmt
+            || entity
+                .get_semantic_parent()
+                .is_some_and(|parent| parent.get_kind() == EntityKind::Constructor)
+            || !self.complex(child)
+        {
+            return;
+        }
+
+        let Some(current) = self.range(child) else {
+            return;
+        };
+
+        let Some(body) = self.range(entity) else {
+            return;
+        };
+
+        let Some(opening) = self
+            .tokens(&body)
+            .iter()
+            .find(|token| &self.source[token.range.clone()] == "{")
+        else {
+            return;
+        };
+
+        if let Some(offset) = self.boundary(opening.range.end, current.start) {
+            self.insertions.insert(offset);
+        }
+    }
+
     fn visit(&mut self, entity: Entity<'_>, root: bool) {
         if self.opaque(entity) || entity.get_kind() == EntityKind::CallExpr {
             return;
@@ -301,6 +332,10 @@ impl Formatter<'_, '_> {
             .into_iter()
             .filter(|child| self.range(*child).is_some())
             .collect();
+
+        if let Some(child) = children.first() {
+            self.space_first_statement(entity, *child);
+        }
 
         if root
             || matches!(
@@ -533,6 +568,37 @@ mod tests {
     }
 
     #[test]
+    fn spaces_first_control_flow_statement() {
+        let source = "int resolve(\n    const int *from, int *expression, const int &) {\n    if (!from) {\n        return 0;\n    }\n    return expression ? *from : 0;\n}\n";
+
+        let expected = source
+            .replace(") {\n    if", ") {\n\n    if")
+            .replace("}\n    return expression", "}\n\n    return expression");
+
+        let rules = crate::configuration::Rules::default();
+
+        assert_eq!(super::breathe(source, None, &rules).unwrap(), expected);
+        assert_eq!(super::breathe(&expected, None, &rules).unwrap(), expected);
+
+        assert_eq!(
+            super::breathe(&source.replace('\n', "\r\n"), None, &rules).unwrap(),
+            expected.replace('\n', "\r\n")
+        );
+    }
+
+    #[test]
+    fn leaves_first_constructor_loop_adjacent() {
+        let source = "struct Sources {\n    Sources(int count) {\n        for (int index = 0; index < count; ++index) {\n            (void)index;\n        }\n    }\n};\n";
+
+        let rules = crate::configuration::Rules::default();
+
+        assert_eq!(super::breathe(source, None, &rules).unwrap(), source);
+
+        let windows = source.replace('\n', "\r\n");
+        assert_eq!(super::breathe(&windows, None, &rules).unwrap(), windows);
+    }
+
+    #[test]
     fn respects_related_reads_and_shadowed_bindings() {
         let configuration: crate::configuration::Configuration =
             toml::from_str("[\"c++\"]\nrelated = true\n").unwrap();
@@ -568,7 +634,9 @@ mod tests {
 
             let expected =
                 crate::languages::c::breathe(source, &tree_sitter_cpp::LANGUAGE.into(), &rules)
-                    .unwrap();
+                    .unwrap()
+                    .replace("{\n    switch", "{\n\n    switch")
+                    .replace("{\n        if", "{\n\n        if");
 
             assert_eq!(super::breathe(source, None, &rules).unwrap(), expected);
         }
@@ -580,7 +648,9 @@ mod tests {
 
         assert_eq!(
             super::breathe(source, None, &crate::configuration::Rules::default()).unwrap(),
-            source.replace("    return callback", "\n    return callback")
+            source
+                .replace("() {\n    auto", "() {\n\n    auto")
+                .replace("    return callback", "\n    return callback")
         );
     }
 
