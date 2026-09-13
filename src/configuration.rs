@@ -254,6 +254,7 @@ language!(
     MatchArms,
     EnumVariants
 );
+
 language!(
     Lua,
     lua,
@@ -268,6 +269,7 @@ language!(
     Declarations,
     ReturnStatements
 );
+
 language!(
     Luau,
     luau,
@@ -289,6 +291,7 @@ language!(
     ClassGroups,
     PopulatedDeclarations
 );
+
 language!(
     C,
     c,
@@ -306,6 +309,7 @@ language!(
     SwitchCases,
     EnumMembers
 );
+
 language!(
     CPlusPlus,
     cplusplus,
@@ -326,6 +330,7 @@ language!(
     SwitchCases,
     EnumMembers
 );
+
 language!(
     Nushell,
     nushell,
@@ -347,6 +352,7 @@ language!(
     RecordFields,
     MatchArms
 );
+
 language!(
     Python,
     python,
@@ -368,6 +374,7 @@ language!(
     DictionaryEntries,
     MatchCases
 );
+
 language!(
     Javascript,
     javascript,
@@ -389,6 +396,7 @@ language!(
     ObjectProperties,
     SwitchCases
 );
+
 language!(
     Typescript,
     typescript,

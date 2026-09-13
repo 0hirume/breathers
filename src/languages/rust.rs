@@ -223,8 +223,7 @@ pub fn breathe(source: &str, rules: &Rules) -> Result<String, String> {
 
         for pair in statements.windows(2) {
             let separate = if items(&container) {
-                rules.enabled(Rule::Functions)
-                    && pair.iter().any(|item| block(item) == Some(Rule::Functions))
+                pair.iter().any(|item| complex(item, rules))
             } else if container.kind() == SyntaxKind::STMT_LIST {
                 complex(&pair[0], rules)
                     || complex(&pair[1], rules)
@@ -310,6 +309,42 @@ pub fn breathe(source: &str, rules: &Rules) -> Result<String, String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn spaces_multiline_items() {
+        let source = "pub(crate) use options::Options;\npub(super) struct Layout<'a> {\n    pub(crate) source: &'a str,\n    pub(crate) options: &'a Options,\n}\nuse other::Other;\n";
+
+        let expected = source
+            .replace(";\npub(super)", ";\n\npub(super)")
+            .replace("}\nuse", "}\n\nuse");
+
+        let rules = crate::configuration::Rules::default();
+
+        let configuration: crate::configuration::Configuration =
+            toml::from_str("[rust]\nmultiline = false\n").unwrap();
+
+        for (opening, closing) in [("", ""), ("mod example {\n", "}\n")] {
+            let source = format!("{opening}{source}{closing}");
+            let expected = format!("{opening}{expected}{closing}");
+            assert_eq!(super::breathe(&source, &rules).unwrap(), expected);
+            assert_eq!(super::breathe(&expected, &rules).unwrap(), expected);
+
+            assert_eq!(
+                super::breathe(&source, &configuration.rust).unwrap(),
+                source
+            );
+
+            assert_eq!(
+                super::breathe(&expected, &configuration.rust).unwrap(),
+                expected
+            );
+
+            assert_eq!(
+                super::breathe(&source.replace('\n', "\r\n"), &rules).unwrap(),
+                expected.replace('\n', "\r\n")
+            );
+        }
+    }
+
     #[test]
     fn spaces_function_items_in_files_modules_and_implementations() {
         let functions = "pub(super) fn first() -> u8 {\n    1\n}\n/// Second function.\n#[inline]\npub(super) fn second() -> u8 {\n    2\n}\n";
