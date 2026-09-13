@@ -438,9 +438,11 @@ fn main() -> ExitCode {
 #[cfg(test)]
 mod tests {
     use super::{Arguments, Language, collect};
+
     fn breathe(source: &str) -> Result<String, String> {
         crate::languages::rust::breathe(source, &crate::configuration::Rules::default())
     }
+
     use clap::Parser;
     use std::{collections::BTreeSet, fs, path::PathBuf};
 

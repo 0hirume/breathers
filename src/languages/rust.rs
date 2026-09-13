@@ -185,6 +185,13 @@ fn related(previous: &SyntaxNode, next: &SyntaxNode) -> bool {
     !names.is_empty() && reads(next, &names)
 }
 
+fn items(node: &SyntaxNode) -> bool {
+    matches!(
+        node.kind(),
+        SyntaxKind::SOURCE_FILE | SyntaxKind::ITEM_LIST | SyntaxKind::ASSOC_ITEM_LIST
+    )
+}
+
 pub fn breathe(source: &str, rules: &Rules) -> Result<String, String> {
     let parsed = SourceFile::parse(source, Edition::CURRENT);
     let errors = parsed.errors();
@@ -199,21 +206,26 @@ pub fn breathe(source: &str, rules: &Rules) -> Result<String, String> {
 
     let mut insertions = BTreeSet::new();
 
-    for block in parsed.tree().syntax().descendants().filter(|node| {
-        matches!(
-            node.kind(),
-            SyntaxKind::STMT_LIST | SyntaxKind::MATCH_ARM_LIST | SyntaxKind::VARIANT_LIST
-        ) || (matches!(
-            node.kind(),
-            SyntaxKind::RECORD_FIELD_LIST | SyntaxKind::TUPLE_FIELD_LIST
-        ) && node
-            .parent()
-            .is_some_and(|parent| parent.kind() == SyntaxKind::STRUCT))
+    for container in parsed.tree().syntax().descendants().filter(|node| {
+        items(node)
+            || matches!(
+                node.kind(),
+                SyntaxKind::STMT_LIST | SyntaxKind::MATCH_ARM_LIST | SyntaxKind::VARIANT_LIST
+            )
+            || (matches!(
+                node.kind(),
+                SyntaxKind::RECORD_FIELD_LIST | SyntaxKind::TUPLE_FIELD_LIST
+            ) && node
+                .parent()
+                .is_some_and(|parent| parent.kind() == SyntaxKind::STRUCT))
     }) {
-        let statements: Vec<_> = block.children().collect();
+        let statements: Vec<_> = container.children().collect();
 
         for pair in statements.windows(2) {
-            let separate = if block.kind() == SyntaxKind::STMT_LIST {
+            let separate = if items(&container) {
+                rules.enabled(Rule::Functions)
+                    && pair.iter().any(|item| block(item) == Some(Rule::Functions))
+            } else if container.kind() == SyntaxKind::STMT_LIST {
                 complex(&pair[0], rules)
                     || complex(&pair[1], rules)
                     || (if pair[1].kind() == SyntaxKind::RETURN_EXPR
@@ -226,7 +238,7 @@ pub fn breathe(source: &str, rules: &Rules) -> Result<String, String> {
                         ast::Expr::can_cast(pair[1].kind()) && rules.enabled(Rule::TailExpressions)
                     })
             } else {
-                let rule = match block.kind() {
+                let rule = match container.kind() {
                     SyntaxKind::MATCH_ARM_LIST => Rule::MatchArms,
                     SyntaxKind::VARIANT_LIST => Rule::EnumVariants,
                     SyntaxKind::TUPLE_FIELD_LIST => Rule::TupleFields,
@@ -237,7 +249,7 @@ pub fn breathe(source: &str, rules: &Rules) -> Result<String, String> {
             };
 
             if !separate
-                || (block.kind() == SyntaxKind::STMT_LIST
+                || (container.kind() == SyntaxKind::STMT_LIST
                     && rules.enabled(Rule::Related)
                     && related(&pair[0], &pair[1]))
             {
@@ -294,4 +306,43 @@ pub fn breathe(source: &str, rules: &Rules) -> Result<String, String> {
     }
 
     Ok(crate::spacing::apply(source, insertions))
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn spaces_function_items_in_files_modules_and_implementations() {
+        let functions = "pub(super) fn first() -> u8 {\n    1\n}\n/// Second function.\n#[inline]\npub(super) fn second() -> u8 {\n    2\n}\n";
+
+        let configuration: crate::configuration::Configuration =
+            toml::from_str("[rust]\nfunctions = false\n").unwrap();
+
+        let rules = crate::configuration::Rules::default();
+
+        for (opening, closing) in [
+            ("", ""),
+            ("mod example {\n", "}\n"),
+            ("impl Example {\n", "}\n"),
+        ] {
+            let source = format!("{opening}{functions}{closing}");
+            let expected = source.replace("}\n///", "}\n\n///");
+            assert_eq!(super::breathe(&source, &rules).unwrap(), expected);
+            assert_eq!(super::breathe(&expected, &rules).unwrap(), expected);
+
+            assert_eq!(
+                super::breathe(&source, &configuration.rust).unwrap(),
+                source
+            );
+
+            assert_eq!(
+                super::breathe(&expected, &configuration.rust).unwrap(),
+                expected
+            );
+
+            assert_eq!(
+                super::breathe(&source.replace('\n', "\r\n"), &rules).unwrap(),
+                expected.replace('\n', "\r\n")
+            );
+        }
+    }
 }
