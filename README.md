@@ -41,6 +41,7 @@ breathers src/main.rs src/main.luau
 | Nushell          | `.nu`                                                                    |
 | JavaScript / JSX | `.js`, `.jsx`, `.mjs`, `.cjs`                                            |
 | TypeScript / TSX | `.ts`, `.mts`, `.cts`, `.tsx`                                            |
+| PowerShell       | `.ps1`, `.psm1`, `.psd1`                                                 |
 
 Override detection with `-l` / `--language`. Use `-l luau` for Luau files named `.lua`, or `-l tsx` to select TSX explicitly.
 

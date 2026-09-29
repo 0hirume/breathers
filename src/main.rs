@@ -24,11 +24,12 @@ mod languages {
     pub mod lua;
     pub mod luau;
     pub mod nushell;
+    pub mod powershell;
     pub mod python;
     pub mod rust;
 }
 
-use languages::{c, cplusplus, javascript, lua, luau, nushell, python, rust};
+use languages::{c, cplusplus, javascript, lua, luau, nushell, powershell, python, rust};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
 enum Language {
@@ -38,6 +39,7 @@ enum Language {
     C,
     Python,
     Nushell,
+    Powershell,
     Javascript,
     Typescript,
     Tsx,
@@ -55,6 +57,7 @@ impl Language {
             "c" | "h" => Some(Self::C),
             "py" | "pyi" => Some(Self::Python),
             "nu" => Some(Self::Nushell),
+            "ps1" | "psm1" | "psd1" => Some(Self::Powershell),
             "js" | "jsx" | "mjs" | "cjs" => Some(Self::Javascript),
             "ts" | "mts" | "cts" => Some(Self::Typescript),
             "tsx" => Some(Self::Tsx),
@@ -91,6 +94,7 @@ impl Language {
 
             Self::Python => python::breathe(source, &configuration.python),
             Self::Nushell => nushell::breathe(source, &configuration.nushell),
+            Self::Powershell => powershell::breathe(source, &configuration.powershell),
 
             Self::Javascript => javascript::breathe(
                 source,

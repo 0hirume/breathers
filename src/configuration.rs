@@ -103,7 +103,7 @@ impl Rule {
             Self::Classes => "Separate class declarations.",
             Self::Interfaces => "Separate TypeScript interface declarations.",
             Self::Calls => "Separate multiline call expressions.",
-            Self::Pipelines => "Separate multiline Nushell pipelines.",
+            Self::Pipelines => "Separate multiline pipelines.",
             Self::Arrays => "Separate multiline array and sequence expressions.",
             Self::Tables => "Separate multiline Lua, Luau, and Nushell table expressions.",
             Self::Objects => "Separate multiline object, dictionary, and record expressions.",
@@ -130,13 +130,20 @@ impl Rule {
                 "Separate multiline JavaScript and TypeScript object properties."
             }
 
-            Self::DictionaryEntries => "Separate multiline Python dictionary entries.",
+            Self::DictionaryEntries => {
+                "Separate multiline Python and PowerShell dictionary entries."
+            }
+
             Self::RecordFields => "Separate multiline Nushell record fields.",
             Self::MatchArms => "Separate multiline Rust and Nushell match arms.",
             Self::MatchCases => "Separate multiline Python match cases.",
             Self::SwitchCases => "Separate multiline switch cases.",
             Self::EnumVariants => "Separate multiline Rust enum variants.",
-            Self::EnumMembers => "Separate multiline C, C++, and TypeScript enum members.",
+
+            Self::EnumMembers => {
+                "Separate multiline C, C++, TypeScript, and PowerShell enum members."
+            }
+
             Self::Services => "Separate Luau service groups from other module groups.",
             Self::Requires => "Separate Luau require groups by module path prefix.",
             Self::TypeGroups => "Separate imported, local, and exported Luau type groups.",
@@ -354,6 +361,29 @@ language!(
 );
 
 language!(
+    Powershell,
+    powershell,
+    Conditionals,
+    ForLoops,
+    WhileLoops,
+    DoBlocks,
+    Switches,
+    TryBlocks,
+    Functions,
+    Classes,
+    Calls,
+    Pipelines,
+    Arrays,
+    Objects,
+    Declarations,
+    ReturnStatements,
+    ClassMembers,
+    DictionaryEntries,
+    SwitchCases,
+    EnumMembers
+);
+
+language!(
     Python,
     python,
     Conditionals,
@@ -480,6 +510,13 @@ pub struct Configuration {
     )]
     pub nushell: Rules,
 
+    #[serde(deserialize_with = "powershell")]
+    #[schemars(
+        with = "BTreeMap<Powershell, bool>",
+        description = "PowerShell spacing rules. Default: inherit global settings, then built-in defaults."
+    )]
+    pub powershell: Rules,
+
     #[serde(deserialize_with = "python")]
     #[schemars(
         with = "BTreeMap<Python, bool>",
@@ -575,6 +612,8 @@ impl Configuration {
         self.c.0.extend(project.c.0);
         self.cplusplus.0.extend(project.cplusplus.0);
         self.nushell.0.extend(project.nushell.0);
+        self.powershell.0.extend(project.powershell.0);
+
         self.python.0.extend(project.python.0);
         self.javascript.0.extend(project.javascript.0);
         self.typescript.0.extend(project.typescript.0);
@@ -764,6 +803,13 @@ mod tests {
             "blocks",
             "decorated_functions",
             "work()\n@decorate\ndef example():\n    pass\nfinish()\n",
+        ),
+        (
+            Language::Powershell,
+            "powershell",
+            "returns",
+            "return_statements",
+            "function Example {\n    Write-Output 'before'\n    return $value\n}\n",
         ),
         (
             Language::Python,

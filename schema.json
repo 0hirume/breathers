@@ -39,7 +39,7 @@
           "type": "boolean"
         },
         "enum_members": {
-          "description": "Separate multiline C, C++, and TypeScript enum members. Inherits `variants`. Omitted project keys inherit global settings first.",
+          "description": "Separate multiline C, C++, TypeScript, and PowerShell enum members. Inherits `variants`. Omitted project keys inherit global settings first.",
           "type": "boolean"
         },
         "fields": {
@@ -147,7 +147,7 @@
           "type": "boolean"
         },
         "enum_members": {
-          "description": "Separate multiline C, C++, and TypeScript enum members. Inherits `variants`. Omitted project keys inherit global settings first.",
+          "description": "Separate multiline C, C++, TypeScript, and PowerShell enum members. Inherits `variants`. Omitted project keys inherit global settings first.",
           "type": "boolean"
         },
         "fields": {
@@ -218,20 +218,14 @@
     },
     "exclude": {
       "description": "Exclude files and directories matching these globs, using the same root as include. Default: inherit the global list, otherwise add no exclusions. An empty list clears inherited exclusions; directory searches still skip .git and symbolic links.",
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "items": {
         "type": "string"
       }
     },
     "include": {
       "description": "Include files matching these globs, relative to the project configuration directory or current working directory. Default: inherit the global list, otherwise select all eligible files. An empty list selects none. Exclusions win.",
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": ["array", "null"],
       "items": {
         "type": "string"
       }
@@ -630,7 +624,7 @@
           "type": "boolean"
         },
         "pipelines": {
-          "description": "Separate multiline Nushell pipelines. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "description": "Separate multiline pipelines. Inherits `multiline`. Omitted project keys inherit global settings first.",
           "type": "boolean"
         },
         "record_fields": {
@@ -653,6 +647,126 @@
         },
         "tables": {
           "description": "Separate multiline Lua, Luau, and Nushell table expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "try_blocks": {
+          "description": "Separate try statements. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "variants": {
+          "description": "Separate multiline enum entries. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "while_loops": {
+          "description": "Separate while loops. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "default": {}
+    },
+    "powershell": {
+      "description": "PowerShell spacing rules. Default: inherit global settings, then built-in defaults.",
+      "type": "object",
+      "properties": {
+        "arms": {
+          "description": "Separate multiline match arms and switch cases. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "arrays": {
+          "description": "Separate multiline array and sequence expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "blocks": {
+          "description": "Separate control flow and block declarations. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "calls": {
+          "description": "Separate multiline call expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "class_members": {
+          "description": "Separate multiline class members. Inherits `fields`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "classes": {
+          "description": "Separate class declarations. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "conditionals": {
+          "description": "Separate conditional statements and expressions. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "declarations": {
+          "description": "Separate multiline declarations not classified as calls, collections, or type aliases. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "dictionary_entries": {
+          "description": "Separate multiline Python and PowerShell dictionary entries. Inherits `fields`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "do_blocks": {
+          "description": "Separate do blocks and do-while loops where supported. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "enum_members": {
+          "description": "Separate multiline C, C++, TypeScript, and PowerShell enum members. Inherits `variants`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "fields": {
+          "description": "Separate multiline fields, members, and dictionary entries. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "for_loops": {
+          "description": "Separate for loops. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "functions": {
+          "description": "Separate function declarations. Inherits `blocks`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "groups": {
+          "description": "Separate Luau module groups. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "multiline": {
+          "description": "Separate other multiline statements. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "objects": {
+          "description": "Separate multiline object, dictionary, and record expressions. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "pipelines": {
+          "description": "Separate multiline pipelines. Inherits `multiline`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "related": {
+          "description": "Keep adjacent variable dependencies together without removing existing blank lines. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": false
+        },
+        "return_statements": {
+          "description": "Insert a blank line before noninitial return statements. Inherits `returns`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "returns": {
+          "description": "Separate noninitial returns and Rust tail expressions. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": true
+        },
+        "switch_cases": {
+          "description": "Separate multiline switch cases. Inherits `arms`. Omitted project keys inherit global settings first.",
+          "type": "boolean"
+        },
+        "switches": {
+          "description": "Separate switch statements. Inherits `blocks`. Omitted project keys inherit global settings first.",
           "type": "boolean"
         },
         "try_blocks": {
@@ -711,7 +825,7 @@
           "type": "boolean"
         },
         "dictionary_entries": {
-          "description": "Separate multiline Python dictionary entries. Inherits `fields`. Omitted project keys inherit global settings first.",
+          "description": "Separate multiline Python and PowerShell dictionary entries. Inherits `fields`. Omitted project keys inherit global settings first.",
           "type": "boolean"
         },
         "fields": {
@@ -947,7 +1061,7 @@
           "type": "boolean"
         },
         "enum_members": {
-          "description": "Separate multiline C, C++, and TypeScript enum members. Inherits `variants`. Omitted project keys inherit global settings first.",
+          "description": "Separate multiline C, C++, TypeScript, and PowerShell enum members. Inherits `variants`. Omitted project keys inherit global settings first.",
           "type": "boolean"
         },
         "fields": {

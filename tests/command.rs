@@ -178,6 +178,37 @@ fn formats_cplusplus_with_clangd_flags_and_buffer_contents() {
 }
 
 #[test]
+fn serves_powershell_formatting_and_rejects_invalid_buffers() {
+    use serde_json::json;
+
+    let root = directory();
+    fs::write(root.join("breathers.toml"), "").unwrap();
+    let source = "function example {\n    Write-Output \"ready\"\n    return 1\n}\n";
+    let buffer = source.replace("ready", "from-buffer");
+    let expected = buffer.replace("\n    return", "\n\n    return");
+
+    let responses = protocol(
+        &root,
+        &["--lsp"],
+        &[
+            json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"capabilities":{}}}),
+            json!({"jsonrpc":"2.0","method":"initialized","params":{}}),
+            json!({"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"untitled:example","languageId":"powershell","version":1,"text":buffer}}}),
+            json!({"jsonrpc":"2.0","id":2,"method":"textDocument/formatting","params":{"textDocument":{"uri":"untitled:example"},"options":{"tabSize":4,"insertSpaces":true}}}),
+            json!({"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{"uri":"untitled:example","version":2},"contentChanges":[{"text":"function broken {"}]}}),
+            json!({"jsonrpc":"2.0","id":3,"method":"textDocument/formatting","params":{"textDocument":{"uri":"untitled:example"},"options":{"tabSize":4,"insertSpaces":true}}}),
+            json!({"jsonrpc":"2.0","id":4,"method":"shutdown"}),
+            json!({"jsonrpc":"2.0","method":"exit"}),
+        ],
+    );
+
+    assert_eq!(responses[&2]["result"][0]["newText"], expected);
+    assert!(responses[&3].get("error").is_some());
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn serves_nushell_formatting() {
     use serde_json::json;
 
@@ -411,6 +442,10 @@ fn formats_standard_input_without_writing_files() {
         (
             "nushell",
             "def example [] {\n    print ready\n    return 1\n}\n",
+        ),
+        (
+            "powershell",
+            "function example {\n    Write-Output \"ready\"\n    return 1\n}\n",
         ),
         (
             "javascript",
@@ -843,6 +878,36 @@ fn detects_lua_and_luau_and_accepts_overrides() {
         fs::read_to_string(root.join("src/module.lua")).unwrap(),
         "local broken = {"
     );
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn detects_powershell_extensions_recursively() {
+    let root = directory();
+    let nested = root.join("nested");
+    fs::create_dir(&nested).unwrap();
+    let source = "function example {\n    Write-Output \"ready\"\n    return 1\n}\n";
+    let expected = source.replace("\n    return", "\n\n    return");
+
+    for name in ["example.ps1", "module.psm1", "manifest.psd1"] {
+        fs::write(nested.join(name), source).unwrap();
+    }
+
+    let output = Command::new(env!("CARGO_BIN_EXE_breathers"))
+        .current_dir(&root)
+        .output()
+        .unwrap();
+
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    for name in ["example.ps1", "module.psm1", "manifest.psd1"] {
+        assert_eq!(fs::read_to_string(nested.join(name)).unwrap(), expected);
+    }
 
     fs::remove_dir_all(root).unwrap();
 }
