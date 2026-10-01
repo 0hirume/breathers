@@ -29,7 +29,7 @@ mod languages {
     pub mod rust;
 }
 
-use languages::{c, cplusplus, javascript, lua, luau, nushell, powershell, python, rust};
+use languages::{c, javascript, lua, luau, nushell, powershell, python, rust};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
 enum Language {
@@ -88,9 +88,9 @@ impl Language {
             Self::Rust => rust::breathe(source, &configuration.rust),
             Self::Luau => luau::breathe(source, &configuration.luau),
             Self::Lua => lua::breathe(source, &configuration.lua),
-            Self::C => c::breathe(source, &tree_sitter_c::LANGUAGE.into(), &configuration.c),
+            Self::C => c::breathe(source, path, &configuration.c, "c"),
 
-            Self::CPlusPlus => cplusplus::breathe(source, path, &configuration.cplusplus),
+            Self::CPlusPlus => c::breathe(source, path, &configuration.cplusplus, "c++"),
 
             Self::Python => python::breathe(source, &configuration.python),
             Self::Nushell => nushell::breathe(source, &configuration.nushell),
@@ -523,8 +523,8 @@ mod tests {
             ),
             (
                 Language::C,
-                "int example(void) {\n    work();\n    return 1;\n}\n",
-                "int example(void) {\n    work();\n\n    return 1;\n}\n",
+                "int example(void) {\n    int value = 1;\n    return value;\n}\n",
+                "int example(void) {\n    int value = 1;\n\n    return value;\n}\n",
             ),
             (
                 Language::CPlusPlus,

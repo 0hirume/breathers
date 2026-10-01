@@ -178,6 +178,67 @@ fn formats_cplusplus_with_clangd_flags_and_buffer_contents() {
 }
 
 #[test]
+fn formats_c_preprocessing_and_rejects_active_errors() {
+    let root = directory();
+    fs::create_dir(root.join("include")).unwrap();
+    fs::write(root.join("breathers.toml"), "").unwrap();
+
+    fs::write(
+        root.join(".clangd"),
+        "CompileFlags:\n  Add: [-std=c11, -Iinclude, -DENABLED=1]\n",
+    )
+    .unwrap();
+
+    let header = "#ifndef VALUE_H\n#define VALUE_H\n#ifdef __cplusplus\nextern \"C\" {\n#endif\n#ifndef ENABLED\n#error missing compiler flag\n#endif\n#define FIELD(type) type field;\n#define CHANGE(value) do { if (value) { ++value; } } while (0)\nstruct Value { FIELD(int) };\n#ifdef __cplusplus\n}\n#endif\n#endif\n";
+    fs::write(root.join("include/value.h"), header).unwrap();
+
+    let source = "#include <value.h>\nint example(void) {\n    struct Value value = { .field = ENABLED };\n    int class = value.field;\n    CHANGE(class);\n    return class;\n}\n";
+    let expected = source.replace("    return", "\n    return");
+    let path = root.join("source.c");
+    fs::write(&path, source).unwrap();
+
+    for _ in 0..2 {
+        let output = input(&root, &["source.c"], b"");
+
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+
+        assert_eq!(fs::read_to_string(&path).unwrap(), expected);
+    }
+
+    let output = input(&root, &["-l", "c", "-"], source.as_bytes());
+
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert_eq!(output.stdout, expected.as_bytes());
+
+    let invalid = source.replace("return class;", "return class +;");
+    fs::write(&path, &invalid).unwrap();
+    let output = input(&root, &["source.c"], b"");
+    assert!(!output.status.success());
+    assert_eq!(fs::read_to_string(&path).unwrap(), invalid);
+
+    fs::write(root.join(".clangd"), "CompileFlags:\n  Add: -std=c11\n").unwrap();
+    let output = input(&root, &["-l", "c", "-"], source.as_bytes());
+    assert!(!output.status.success());
+    assert_eq!(output.stdout, Vec::<u8>::new());
+
+    assert_eq!(
+        fs::read_to_string(root.join("include/value.h")).unwrap(),
+        header
+    );
+
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn serves_powershell_formatting_and_rejects_invalid_buffers() {
     use serde_json::json;
 
@@ -436,7 +497,10 @@ fn formats_standard_input_without_writing_files() {
         ("rust", "fn example() {\n    work();\n    return 1;\n}\n"),
         ("lua", "local value = 1\nreturn value\n"),
         ("luau", "local value: number = 1\nreturn value\n"),
-        ("c", "int example(void) {\n    work();\n    return 1;\n}\n"),
+        (
+            "c",
+            "void work(void);\n\nint example(void) {\n    work();\n    return 1;\n}\n",
+        ),
         ("c++", "int example() {\n    work();\n    return 1;\n}\n"),
         ("python", "def example():\n    work()\n    return 1\n"),
         (
@@ -1076,7 +1140,7 @@ fn formats_selected_files() {
     let root = directory();
     fs::create_dir(root.join("src")).unwrap();
     fs::create_dir(root.join("target")).unwrap();
-    let source = "int example(void) {\n    work();\n    return 1;\n}\n";
+    let source = "void work(void);\n\nint example(void) {\n    work();\n    return 1;\n}\n";
     let expected = source.replace("    return", "\n    return");
 
     let files = [
@@ -1141,7 +1205,7 @@ fn formats_selected_files() {
 #[test]
 fn formats_valid_files_and_reports_syntax_errors() {
     let root = directory();
-    let source = "int example(void) {\n    work();\n    return 1;\n}\n";
+    let source = "void work(void);\n\nint example(void) {\n    work();\n    return 1;\n}\n";
     let expected = source.replace("    return", "\n    return");
 
     for (name, invalid, formatted) in [

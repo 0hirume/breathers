@@ -788,7 +788,7 @@ mod tests {
             "c",
             "blocks",
             "while_loops",
-            "void example(void) {\n    work();\n    while (ready()) {\n        process();\n    }\n    finish();\n}\n",
+            "void work(void), process(void), finish(void);\nint ready(void);\n\nvoid example(void) {\n    work();\n    while (ready()) {\n        process();\n    }\n    finish();\n}\n",
         ),
         (
             Language::CPlusPlus,
@@ -1002,7 +1002,7 @@ mod tests {
         (
             Language::C,
             "c",
-            "void example(void) {\n    value = build(\n        input\n    );\n    value += 1;\n}\n",
+            "int value, input;\nint build(int input);\nvoid example(void) {\n    value = build(\n        input\n    );\n    value += 1;\n}\n",
             "    value +=",
         ),
         (
@@ -1062,7 +1062,7 @@ mod tests {
         (
             Language::C,
             "c",
-            "void example(void) {\n    int ready = check();\n    if (ready) {\n        work();\n    }\n}\n",
+            "int check(void);\nvoid work(void);\nvoid example(void) {\n    int ready = check();\n    if (ready) {\n        work();\n    }\n}\n",
             "    if (ready)",
         ),
         (
@@ -1193,12 +1193,12 @@ mod tests {
         (
             Language::C,
             "c",
-            "void example(void) {\n    int ready = 1;\n    if (object->ready) {\n        work();\n    }\n}\n",
+            "struct Object { int ready; };\nextern struct Object *object;\nvoid work(void);\nvoid example(void) {\n    int ready = 1;\n    if (object->ready) {\n        work();\n    }\n}\n",
         ),
         (
             Language::C,
             "c",
-            "void example(void) {\n    int index = 1;\n    for (int index = 0; index < 10; index++) {\n        work();\n    }\n}\n",
+            "void work(void);\nvoid example(void) {\n    int index = 1;\n    for (int index = 0; index < 10; index++) {\n        work();\n    }\n}\n",
         ),
         (
             Language::CPlusPlus,
@@ -1438,7 +1438,7 @@ mod tests {
                 Language::C,
                 "c",
                 "returns",
-                "int example(void) {\n    work();\n    return 1;\n}\n",
+                "void work(void);\n\nint example(void) {\n    work();\n    return 1;\n}\n",
             ),
             (
                 Language::CPlusPlus,
