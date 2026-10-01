@@ -1295,9 +1295,8 @@ mod tests {
                 (false, Some(true), formatted.as_str()),
                 (true, Some(false), source),
             ] {
-                let override_text = override_value
-                    .map(|value| format!("{specific} = {value}\n"))
-                    .unwrap_or_default();
+                let override_text =
+                    override_value.map_or_default(|value| format!("{specific} = {value}\n"));
 
                 let text = format!("[\"{section}\"]\n{group} = {group_value}\n{override_text}");
                 let configuration: Configuration = toml::from_str(&text).unwrap();
