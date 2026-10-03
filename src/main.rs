@@ -775,7 +775,7 @@ mod tests {
 
     #[test]
     fn spaces_multiline_match_arms() {
-        let source = "fn example() {\n    match kind {\n        Kind::First => 1,\n        Kind::Second => 2, // trailing\n        // attached\n        Kind::Index => Parts::Index {\n            receiver: children.next()?,\n            key: children.next()?,\n        },\n        Kind::Instantiate => Parts::Instantiate {\n            expression: children.next()?,\n            arguments: children.next()?,\n        },\n        Kind::Last => 3,\n    }\n}\n";
+        let source = "fn example() {\n    match kind {\n        Kind::First => 1,\n        Kind::Second => 2, // trailing\n        // attached\n        Kind::Index => Value::Index {\n            receiver: children.next()?,\n            key: children.next()?,\n        },\n        Kind::Instantiate => Value::Instantiate {\n            expression: children.next()?,\n            arguments: children.next()?,\n        },\n        Kind::Last => 3,\n    }\n}\n";
 
         let expected = source
             .replace("// trailing\n", "// trailing\n\n")

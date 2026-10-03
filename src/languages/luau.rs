@@ -1,60 +1,91 @@
 use std::collections::BTreeSet;
 
-use vermis::{Kind, Parts, TokenKind, Tree, View};
+use vermis::{
+    token::TokenKind,
+    tree::{NodeIndex, NodeKind, NodeList, Tree},
+};
 
 use crate::configuration::{Rule, Rules};
 
-fn text<'source>(node: View<'_, '_>, source: &'source str) -> &'source str {
-    &source[node.span().start..node.span().end]
+fn text<'source>(node: NodeIndex, tree: &Tree<'_>, source: &'source str) -> &'source str {
+    let span = tree.node(node).span;
+
+    &source[span.start..span.end]
 }
 
-fn declaration<'source>(node: View<'_, '_>, source: &'source str) -> Option<&'source str> {
-    let Parts::Local { mut bindings, .. } = node.parts()? else {
+fn declaration<'source>(
+    node: NodeIndex,
+    tree: &Tree<'_>,
+    source: &'source str,
+) -> Option<&'source str> {
+    let (NodeKind::Local { bindings, .. } | NodeKind::Constant { bindings, .. }) =
+        &tree.node(node).kind
+    else {
         return None;
     };
 
-    let binding = bindings.next()?;
-
-    if bindings.next().is_some() {
-        return None;
-    }
-
-    let Parts::Binding { name, .. } = binding.parts()? else {
+    let [binding] = tree.list(bindings) else {
         return None;
     };
 
-    Some(text(name, source))
+    let NodeKind::Binding { name, .. } = tree.node(binding.node).kind else {
+        return None;
+    };
+
+    Some(text(name, tree, source))
 }
 
-fn root<'source>(node: View<'_, '_>, source: &'source str) -> Option<&'source str> {
-    match node.parts()? {
-        Parts::Field { receiver, .. } | Parts::Index { receiver, .. } => root(receiver, source),
-
-        Parts::Group { expression } | Parts::Assertion { expression, .. } => {
-            root(expression, source)
+fn root<'source>(node: NodeIndex, tree: &Tree<'_>, source: &'source str) -> Option<&'source str> {
+    match tree.node(node).kind {
+        NodeKind::Field { receiver, .. } | NodeKind::Index { receiver, .. } => {
+            root(receiver, tree, source)
         }
 
-        _ if node.kind() == Kind::Name => Some(text(node, source)),
+        NodeKind::Group { expression, .. } | NodeKind::Assertion { expression, .. } => {
+            root(expression, tree, source)
+        }
+
+        NodeKind::Name { .. } => Some(text(node, tree, source)),
         _ => None,
     }
 }
 
-fn assignment<'source>(node: View<'_, '_>, source: &'source str) -> Option<&'source str> {
-    let Parts::Assignment { mut targets, .. } = node.parts()? else {
+fn assignment<'source>(
+    node: NodeIndex,
+    tree: &Tree<'_>,
+    source: &'source str,
+) -> Option<&'source str> {
+    if let NodeKind::CompoundAssignment { target, .. } = tree.node(node).kind {
+        return matches!(
+            tree.node(target).kind,
+            NodeKind::Field { .. } | NodeKind::Index { .. }
+        )
+        .then(|| root(target, tree, source))
+        .flatten();
+    }
+
+    let NodeKind::Assignment { targets, .. } = &tree.node(node).kind else {
         return None;
     };
 
-    let first = targets.next()?;
+    let (first, targets) = tree.list(targets).split_first()?;
 
-    if !matches!(first.kind(), Kind::Field | Kind::Index) {
+    if !matches!(
+        tree.node(first.node).kind,
+        NodeKind::Field { .. } | NodeKind::Index { .. }
+    ) {
         return None;
     }
 
-    let name = root(first, source)?;
+    let name = root(first.node, tree, source)?;
 
     targets
+        .iter()
         .all(|target| {
-            matches!(target.kind(), Kind::Field | Kind::Index) && root(target, source) == Some(name)
+            matches!(
+                tree.node(target.node).kind,
+                NodeKind::Field { .. } | NodeKind::Index { .. }
+            ) && root(target.node, tree, source) == Some(name)
         })
         .then_some(name)
 }
@@ -69,20 +100,28 @@ enum Group<'source> {
     Class,
 }
 
-fn require<'source>(node: View<'_, '_>, source: &'source str) -> Option<&'source str> {
-    match node.parts()? {
-        Parts::Group { expression } | Parts::Assertion { expression, .. } => {
-            require(expression, source)
+fn require<'source>(
+    node: NodeIndex,
+    tree: &Tree<'_>,
+    source: &'source str,
+) -> Option<&'source str> {
+    match tree.node(node).kind {
+        NodeKind::Group { expression, .. } | NodeKind::Assertion { expression, .. } => {
+            require(expression, tree, source)
         }
 
-        Parts::Call { callee, arguments } if text(callee, source) == "require" => {
-            let value = arguments.children().next()?;
+        NodeKind::Call { callee, arguments } if text(callee, tree, source) == "require" => {
+            let NodeKind::Arguments { values, .. } = &tree.node(arguments).kind else {
+                return None;
+            };
 
-            if value.kind() != Kind::String {
+            let value = tree.list(values).first()?.node;
+
+            if !matches!(tree.node(value).kind, NodeKind::String { .. }) {
                 return None;
             }
 
-            let literal = text(value, source);
+            let literal = text(value, tree, source);
             let quote = *literal.as_bytes().first()?;
 
             if !matches!(quote, b'\'' | b'"') || literal.as_bytes().last() != Some(&quote) {
@@ -96,19 +135,25 @@ fn require<'source>(node: View<'_, '_>, source: &'source str) -> Option<&'source
     }
 }
 
-fn group<'source>(node: View<'_, '_>, source: &'source str) -> Option<Group<'source>> {
-    match node.parts()? {
-        Parts::Export { declaration, .. } if declaration.kind() == Kind::TypeAlias => {
+fn group<'source>(
+    node: NodeIndex,
+    tree: &Tree<'_>,
+    source: &'source str,
+) -> Option<Group<'source>> {
+    match &tree.node(node).kind {
+        NodeKind::Export { declaration, .. }
+            if matches!(tree.node(*declaration).kind, NodeKind::TypeAlias { .. }) =>
+        {
             Some(Group::Exported)
         }
 
-        Parts::TypeAlias { annotation, .. } => Some(
+        NodeKind::TypeAlias { annotation, .. } => Some(
             if matches!(
-                annotation.parts(),
-                Some(Parts::TypeName {
+                tree.node(*annotation).kind,
+                NodeKind::TypeName {
                     namespace: Some(_),
                     ..
-                })
+                }
             ) {
                 Group::Imported
             } else {
@@ -116,24 +161,24 @@ fn group<'source>(node: View<'_, '_>, source: &'source str) -> Option<Group<'sou
             },
         ),
 
-        Parts::Local { mut values, .. } => {
-            let value = values.next()?;
+        NodeKind::Local { values, .. } | NodeKind::Constant { values, .. } => {
+            let value = tree.list(values).first()?.node;
 
-            if let Some(Parts::MethodCall {
+            if let NodeKind::MethodCall {
                 receiver, method, ..
-            }) = value.parts()
-                && text(receiver, source) == "game"
-                && text(method, source) == "GetService"
+            } = tree.node(value).kind
+                && text(receiver, tree, source) == "game"
+                && text(method, tree, source) == "GetService"
             {
                 return Some(Group::Service);
             }
 
-            if let Some(alias) = require(value, source) {
+            if let Some(alias) = require(value, tree, source) {
                 return Some(Group::Require(alias));
             }
 
-            if value.kind() == Kind::Table
-                && declaration(node, source)
+            if matches!(tree.node(value).kind, NodeKind::Table { .. })
+                && declaration(node, tree, source)
                     .is_some_and(|name| name.starts_with(char::is_uppercase))
             {
                 return Some(Group::Class);
@@ -142,8 +187,8 @@ fn group<'source>(node: View<'_, '_>, source: &'source str) -> Option<Group<'sou
             None
         }
 
-        Parts::Assignment { .. }
-            if assignment(node, source)
+        NodeKind::Assignment { .. } | NodeKind::CompoundAssignment { .. }
+            if assignment(node, tree, source)
                 .is_some_and(|name| name.starts_with(char::is_uppercase)) =>
         {
             Some(Group::Class)
@@ -153,157 +198,369 @@ fn group<'source>(node: View<'_, '_>, source: &'source str) -> Option<Group<'sou
     }
 }
 
-fn multiline(node: View<'_, '_>, tree: &Tree<'_>, source: &str) -> bool {
-    let span = node.span();
+fn multiline(node: NodeIndex, tree: &Tree<'_>, source: &str) -> bool {
+    let tokens = &tree.node(node).tokens;
 
-    let start = tree
-        .tokens
-        .partition_point(|token| token.span.end <= span.start);
-
-    tree.tokens[start..]
+    tree.tokens[tokens.start.get()..tokens.end.get()]
         .iter()
-        .take_while(|token| token.span.end <= span.end)
         .any(|token| {
             token.kind == TokenKind::Whitespace
                 && source[token.span.start..token.span.end].contains('\n')
         })
 }
 
-fn block(node: View<'_, '_>) -> Option<Rule> {
-    match node.kind() {
-        Kind::If => Some(Rule::Conditionals),
-        Kind::While => Some(Rule::WhileLoops),
-        Kind::Repeat => Some(Rule::RepeatLoops),
-        Kind::NumericFor | Kind::GenericFor => Some(Rule::ForLoops),
-        Kind::Do => Some(Rule::DoBlocks),
-        Kind::Function | Kind::LocalFunction | Kind::TypeFunction => Some(Rule::Functions),
-        Kind::Class => Some(Rule::Classes),
+fn block(node: NodeIndex, tree: &Tree<'_>) -> Option<Rule> {
+    match tree.node(node).kind {
+        NodeKind::If { .. } => Some(Rule::Conditionals),
+        NodeKind::While { .. } => Some(Rule::WhileLoops),
+        NodeKind::Repeat { .. } => Some(Rule::RepeatLoops),
+        NodeKind::NumericFor { .. } | NodeKind::GenericFor { .. } => Some(Rule::ForLoops),
+        NodeKind::Do { .. } => Some(Rule::DoBlocks),
+        NodeKind::Function { .. } => Some(Rule::Functions),
+        NodeKind::Class { .. } => Some(Rule::Classes),
         _ => None,
     }
 }
 
-fn expression(node: View<'_, '_>) -> Option<Rule> {
-    match node.kind() {
-        Kind::TypeAlias => Some(Rule::TypeAliases),
-        Kind::Call | Kind::MethodCall => Some(Rule::Calls),
-        Kind::Table => Some(Rule::Tables),
-        Kind::String | Kind::Interpolation => None,
-        _ => node.children().find_map(expression),
+fn expression(node: NodeIndex, tree: &Tree<'_>) -> Option<Rule> {
+    let child = |node| expression(node, tree);
+    let list = |nodes: &NodeList| tree.list(nodes).iter().find_map(|entry| child(entry.node));
+    let children = |nodes: &[Option<NodeIndex>]| nodes.iter().flatten().copied().find_map(child);
+
+    match &tree.node(node).kind {
+        NodeKind::TypeAlias { .. } => Some(Rule::TypeAliases),
+        NodeKind::Call { .. } | NodeKind::MethodCall { .. } => Some(Rule::Calls),
+        NodeKind::Table { .. } => Some(Rule::Tables),
+
+        NodeKind::CallStatement { call } => child(*call),
+
+        NodeKind::Group { expression, .. } | NodeKind::TypeOf { expression, .. } => {
+            child(*expression)
+        }
+
+        NodeKind::Instantiate {
+            expression,
+            arguments,
+        } => child(*expression).or_else(|| child(*arguments)),
+
+        NodeKind::Assertion {
+            expression,
+            annotation,
+            ..
+        } => child(*expression).or_else(|| child(*annotation)),
+
+        NodeKind::Unary { operand, .. } => child(*operand),
+        NodeKind::Binary { left, right, .. } => child(*left).or_else(|| child(*right)),
+        NodeKind::Field { receiver, .. } => child(*receiver),
+        NodeKind::Index { receiver, key, .. } => child(*receiver).or_else(|| child(*key)),
+
+        NodeKind::Conditional {
+            condition,
+            truthy,
+            falsy,
+            ..
+        } => children(&[Some(*condition), Some(*truthy), Some(*falsy)]),
+
+        NodeKind::Binding {
+            name, annotation, ..
+        } => child(*name).or_else(|| annotation.and_then(child)),
+
+        NodeKind::Variadic { annotation, .. } => annotation.and_then(child),
+
+        NodeKind::TypeFunction {
+            attributes,
+            generics,
+            parameters,
+            returns,
+            ..
+        } => children(&[*attributes, *generics, Some(*parameters), Some(*returns)]),
+
+        NodeKind::FunctionName { path, method, .. } => {
+            list(path).or_else(|| method.and_then(child))
+        }
+
+        NodeKind::Parameters { parameters, .. } | NodeKind::Generics { parameters, .. } => {
+            list(parameters)
+        }
+
+        NodeKind::Returns { annotation, .. }
+        | NodeKind::TypeGroup { annotation, .. }
+        | NodeKind::TypeOptional { annotation, .. }
+        | NodeKind::VariadicType { annotation, .. } => child(*annotation),
+
+        NodeKind::Attributes { attributes } | NodeKind::AttributeGroup { attributes, .. } => {
+            list(attributes)
+        }
+
+        NodeKind::Attribute {
+            name, arguments, ..
+        }
+        | NodeKind::TypeName {
+            name, arguments, ..
+        } => child(*name).or_else(|| arguments.and_then(child)),
+
+        NodeKind::InstantiationArguments { arguments, .. } => child(*arguments),
+        NodeKind::Generic { name, default, .. } => child(*name).or_else(|| default.and_then(child)),
+        NodeKind::GenericPack { name, .. } => child(*name),
+        NodeKind::TableField { key, value, .. } => key.and_then(child).or_else(|| child(*value)),
+
+        NodeKind::TypeTable {
+            element, fields, ..
+        } => element.and_then(child).or_else(|| list(fields)),
+
+        NodeKind::TypeField {
+            key, annotation, ..
+        }
+        | NodeKind::TypeIndexer {
+            key, annotation, ..
+        } => child(*key).or_else(|| child(*annotation)),
+
+        NodeKind::TypeParameter {
+            name, annotation, ..
+        } => child(*name).or_else(|| child(*annotation)),
+
+        NodeKind::TypePack { types, .. } => list(types),
+        NodeKind::TypeArguments { arguments, .. } => list(arguments),
+
+        NodeKind::TypeUnion { left, right, .. }
+        | NodeKind::TypeIntersection { left, right, .. } => {
+            left.and_then(child).or_else(|| child(*right))
+        }
+
+        _ => statement(node, tree),
     }
 }
 
-fn complex(node: View<'_, '_>, tree: &Tree<'_>, source: &str, rules: &Rules) -> bool {
-    if let Some(rule) = block(node) {
+fn statement(node: NodeIndex, tree: &Tree<'_>) -> Option<Rule> {
+    let child = |node| expression(node, tree);
+    let list = |nodes: &NodeList| tree.list(nodes).iter().find_map(|entry| child(entry.node));
+    let children = |nodes: &[Option<NodeIndex>]| nodes.iter().flatten().copied().find_map(child);
+
+    match &tree.node(node).kind {
+        NodeKind::Root { block, .. } => child(*block),
+        NodeKind::Block { statements } => list(statements),
+
+        NodeKind::Local {
+            bindings, values, ..
+        }
+        | NodeKind::Constant {
+            bindings, values, ..
+        } => list(bindings).or_else(|| list(values)),
+
+        NodeKind::Assignment {
+            targets, values, ..
+        } => list(targets).or_else(|| list(values)),
+
+        NodeKind::CompoundAssignment { target, value, .. } => {
+            child(*target).or_else(|| child(*value))
+        }
+
+        NodeKind::Return { values, .. } | NodeKind::Arguments { values, .. } => list(values),
+
+        NodeKind::Function {
+            attributes,
+            name,
+            generics,
+            parameters,
+            returns,
+            body,
+            ..
+        } => children(&[
+            *attributes,
+            *name,
+            *generics,
+            Some(*parameters),
+            *returns,
+            *body,
+        ]),
+
+        NodeKind::If {
+            branches,
+            otherwise,
+            ..
+        } => list(branches).or_else(|| otherwise.and_then(child)),
+
+        NodeKind::Branch {
+            condition, body, ..
+        }
+        | NodeKind::While {
+            condition, body, ..
+        } => child(*condition).or_else(|| child(*body)),
+
+        NodeKind::Repeat {
+            body, condition, ..
+        } => child(*body).or_else(|| child(*condition)),
+
+        NodeKind::NumericFor {
+            binding,
+            start,
+            end,
+            step,
+            body,
+            ..
+        } => children(&[Some(*binding), Some(*start), Some(*end), *step, Some(*body)]),
+
+        NodeKind::GenericFor {
+            bindings,
+            values,
+            body,
+            ..
+        } => list(bindings)
+            .or_else(|| list(values))
+            .or_else(|| child(*body)),
+
+        NodeKind::Do { body, .. } => child(*body),
+
+        NodeKind::Export {
+            attributes,
+            declaration,
+            ..
+        } => attributes.and_then(child).or_else(|| child(*declaration)),
+
+        NodeKind::Declaration { declaration, .. } => child(*declaration),
+
+        NodeKind::Class {
+            name,
+            extends,
+            members,
+            ..
+        } => children(&[Some(*name), *extends]).or_else(|| list(members)),
+
+        NodeKind::Property { binding, .. } => child(*binding),
+        NodeKind::Extends { superclass, .. } => child(*superclass),
+        _ => None,
+    }
+}
+
+fn complex(node: NodeIndex, tree: &Tree<'_>, source: &str, rules: &Rules) -> bool {
+    if let Some(rule) = block(node, tree) {
         rules.enabled(rule)
     } else {
-        let rule =
-            expression(node).unwrap_or(if matches!(node.kind(), Kind::Local | Kind::Constant) {
+        let rule = expression(node, tree).unwrap_or(
+            if matches!(
+                tree.node(node).kind,
+                NodeKind::Local { .. } | NodeKind::Constant { .. }
+            ) {
                 Rule::Declarations
             } else {
                 Rule::Multiline
-            });
+            },
+        );
 
         rules.enabled(rule) && multiline(node, tree, source)
     }
 }
 
-fn reads(node: View<'_, '_>, source: &str, names: &BTreeSet<&str>) -> bool {
-    let uses = |node| reads(node, source, names);
+fn reads(node: NodeIndex, tree: &Tree<'_>, source: &str, names: &BTreeSet<&str>) -> bool {
+    let uses = |node| reads(node, tree, source, names);
 
-    match node.parts() {
-        Some(Parts::Leaf) if node.kind() == Kind::Name => names.contains(text(node, source)),
+    match &tree.node(node).kind {
+        NodeKind::Name { .. } => names.contains(text(node, tree, source)),
 
-        Some(
-            Parts::Local { mut values, .. }
-            | Parts::Return { mut values }
-            | Parts::Arguments { mut values }
-            | Parts::GenericFor { mut values, .. },
-        ) => values.any(uses),
+        NodeKind::Local { values, .. }
+        | NodeKind::Constant { values, .. }
+        | NodeKind::Return { values, .. }
+        | NodeKind::Arguments { values, .. }
+        | NodeKind::GenericFor { values, .. } => {
+            tree.list(values).iter().any(|entry| uses(entry.node))
+        }
 
-        Some(Parts::Assignment {
-            mut targets,
-            mut values,
-            ..
-        }) => {
-            values.any(uses)
-                || targets.any(|target| {
-                    (node.kind() == Kind::CompoundAssignment || target.kind() != Kind::Name)
-                        && uses(target)
+        NodeKind::Assignment {
+            targets, values, ..
+        } => {
+            tree.list(values).iter().any(|entry| uses(entry.node))
+                || tree.list(targets).iter().any(|target| {
+                    !matches!(tree.node(target.node).kind, NodeKind::Name { .. })
+                        && uses(target.node)
                 })
         }
 
-        Some(Parts::If { mut branches, .. }) => branches.next().is_some_and(uses),
+        NodeKind::CompoundAssignment { target, value, .. } => uses(*target) || uses(*value),
 
-        Some(
-            Parts::Branch { condition, .. }
-            | Parts::While { condition, .. }
-            | Parts::Repeat { condition, .. },
-        ) => uses(condition),
+        NodeKind::If { branches, .. } => tree
+            .list(branches)
+            .first()
+            .is_some_and(|entry| uses(entry.node)),
 
-        Some(Parts::NumericFor {
+        NodeKind::Branch { condition, .. }
+        | NodeKind::While { condition, .. }
+        | NodeKind::Repeat { condition, .. } => uses(*condition),
+
+        NodeKind::NumericFor {
             start, end, step, ..
-        }) => uses(start) || uses(end) || step.is_some_and(uses),
+        } => uses(*start) || uses(*end) || step.is_some_and(uses),
 
-        Some(Parts::CallStatement { call }) => uses(call),
-        Some(Parts::Call { callee, arguments }) => uses(callee) || uses(arguments),
+        NodeKind::CallStatement { call } => uses(*call),
+        NodeKind::Call { callee, arguments } => uses(*callee) || uses(*arguments),
 
-        Some(Parts::MethodCall {
+        NodeKind::MethodCall {
             receiver,
             arguments,
             ..
-        }) => uses(receiver) || uses(arguments),
+        } => uses(*receiver) || uses(*arguments),
 
-        Some(Parts::Field { receiver, .. }) => uses(receiver),
-        Some(Parts::Index { receiver, key }) => uses(receiver) || uses(key),
+        NodeKind::Field { receiver, .. } => uses(*receiver),
+        NodeKind::Index { receiver, key, .. } => uses(*receiver) || uses(*key),
 
-        Some(
-            Parts::Group { expression }
-            | Parts::Assertion { expression, .. }
-            | Parts::Instantiate { expression, .. },
-        ) => uses(expression),
+        NodeKind::Group { expression, .. }
+        | NodeKind::Assertion { expression, .. }
+        | NodeKind::Instantiate { expression, .. } => uses(*expression),
 
-        Some(Parts::Unary { operand, .. }) => uses(operand),
-        Some(Parts::Binary { left, right, .. }) => uses(left) || uses(right),
+        NodeKind::Unary { operand, .. } => uses(*operand),
+        NodeKind::Binary { left, right, .. } => uses(*left) || uses(*right),
 
-        Some(Parts::Conditional {
+        NodeKind::Conditional {
             condition,
             truthy,
             falsy,
-        }) => uses(condition) || uses(truthy) || uses(falsy),
+            ..
+        } => uses(*condition) || uses(*truthy) || uses(*falsy),
 
-        Some(Parts::Table { mut fields }) => fields.any(uses),
+        NodeKind::Table { fields, .. } => tree.list(fields).iter().any(|entry| uses(entry.node)),
 
-        Some(Parts::TableField {
+        NodeKind::TableField {
             key,
             value,
-            indexed,
-        }) => uses(value) || (indexed && key.is_some_and(uses)),
+            opening,
+            ..
+        } => uses(*value) || (opening.is_some() && key.is_some_and(uses)),
 
-        Some(Parts::Interpolation { mut segments }) => segments.any(uses),
+        NodeKind::Interpolation { segments } => {
+            tree.list(segments).iter().any(|entry| uses(entry.node))
+        }
+
         _ => false,
     }
 }
 
-fn related(previous: View<'_, '_>, next: View<'_, '_>, source: &str) -> bool {
-    let names: BTreeSet<_> = match previous.parts() {
-        Some(Parts::Local { bindings, .. }) => bindings
+fn related(previous: NodeIndex, next: NodeIndex, tree: &Tree<'_>, source: &str) -> bool {
+    let names: BTreeSet<_> = match &tree.node(previous).kind {
+        NodeKind::Local { bindings, .. } | NodeKind::Constant { bindings, .. } => tree
+            .list(bindings)
+            .iter()
             .filter_map(|binding| {
-                if let Some(Parts::Binding { name, .. }) = binding.parts() {
-                    Some(text(name, source))
+                if let NodeKind::Binding { name, .. } = tree.node(binding.node).kind {
+                    Some(text(name, tree, source))
                 } else {
                     None
                 }
             })
             .collect(),
 
-        Some(Parts::Assignment { targets, .. }) => {
-            targets.filter_map(|target| root(target, source)).collect()
+        NodeKind::Assignment { targets, .. } => tree
+            .list(targets)
+            .iter()
+            .filter_map(|target| root(target.node, tree, source))
+            .collect(),
+
+        NodeKind::CompoundAssignment { target, .. } => {
+            root(*target, tree, source).into_iter().collect()
         }
 
         _ => return false,
     };
 
-    !names.is_empty() && reads(next, source, &names)
+    !names.is_empty() && reads(next, tree, source, &names)
 }
 
 fn group_rule(group: &Group<'_>) -> Rule {
@@ -316,7 +573,7 @@ fn group_rule(group: &Group<'_>) -> Rule {
 }
 
 pub fn breathe(source: &str, rules: &Rules) -> Result<String, String> {
-    let tree = vermis::parse(source.into());
+    let tree = vermis::parse(source.as_bytes());
 
     if !tree.diagnostics.is_empty() {
         return Err(tree
@@ -329,56 +586,53 @@ pub fn breathe(source: &str, rules: &Rules) -> Result<String, String> {
 
     let mut insertions = BTreeSet::new();
 
-    let top = tree.children[tree.nodes[tree.root].children.clone()]
-        .first()
-        .copied();
+    let top = &tree.node(tree.root).kind;
 
-    for (index, node) in tree
-        .nodes
-        .iter()
-        .enumerate()
-        .filter(|(_, node)| node.kind == Kind::Block)
-    {
-        let statements: Vec<_> = tree.children[node.children.clone()]
-            .iter()
-            .filter_map(|index| tree.view(*index))
-            .collect();
+    for (index, node) in tree.nodes.iter().enumerate() {
+        let NodeKind::Block { statements } = &node.kind else {
+            continue;
+        };
+
+        let statements = tree.list(statements);
 
         for (position, pair) in statements.windows(2).enumerate() {
-            let previous = pair[0];
-            let next = pair[1];
+            let previous = pair[0].node;
+            let next = pair[1].node;
 
-            let populated = declaration(next, source).is_some_and(|name| {
-                statements
-                    .get(position + 2)
-                    .is_some_and(|following| assignment(*following, source) == Some(name))
+            let populated = declaration(next, &tree, source).is_some_and(|name| {
+                statements.get(position + 2).is_some_and(|following| {
+                    assignment(following.node, &tree, source) == Some(name)
+                })
             });
 
-            let continuation = assignment(next, source).is_some_and(|name| {
-                declaration(previous, source).or_else(|| assignment(previous, source)) == Some(name)
+            let continuation = assignment(next, &tree, source).is_some_and(|name| {
+                declaration(previous, &tree, source).or_else(|| assignment(previous, &tree, source))
+                    == Some(name)
             });
 
-            let groups = Some(index) == top
-                && matches!((group(previous, source), group(next, source)), (Some(left), Some(right)) if left != right && (rules.enabled(group_rule(&left)) || rules.enabled(group_rule(&right))));
+            let groups = matches!(top, NodeKind::Root { block, .. } if block.get() == index)
+                && matches!((group(previous, &tree, source), group(next, &tree, source)), (Some(left), Some(right)) if left != right && (rules.enabled(group_rule(&left)) || rules.enabled(group_rule(&right))));
 
-            let separate = (rules.enabled(Rule::ReturnStatements) && next.kind() == Kind::Return)
+            let separate = (rules.enabled(Rule::ReturnStatements)
+                && matches!(tree.node(next).kind, NodeKind::Return { .. }))
                 || complex(previous, &tree, source, rules)
                 || complex(next, &tree, source, rules)
                 || (!continuation
                     && (groups
                         || (rules.enabled(Rule::PopulatedDeclarations)
                             && (populated
-                                || (assignment(previous, source).is_some()
-                                    && declaration(next, source).is_some())
-                                || (declaration(previous, source).is_some()
-                                    && assignment(next, source).is_some())))));
+                                || (assignment(previous, &tree, source).is_some()
+                                    && declaration(next, &tree, source).is_some())
+                                || (declaration(previous, &tree, source).is_some()
+                                    && assignment(next, &tree, source).is_some())))));
 
-            if !separate || (rules.enabled(Rule::Related) && related(previous, next, source)) {
+            if !separate || (rules.enabled(Rule::Related) && related(previous, next, &tree, source))
+            {
                 continue;
             }
 
-            let start = previous.span().end;
-            let end = next.span().start;
+            let start = tree.node(previous).span.end;
+            let end = tree.node(next).span.start;
 
             let first = tree
                 .tokens
