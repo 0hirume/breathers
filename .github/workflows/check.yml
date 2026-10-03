@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 env:
-  MISE_AUTO_INSTALL: "false"
+  RUSTUP_TOOLCHAIN: nightly
 
 jobs:
   check:
@@ -28,10 +28,15 @@ jobs:
           persist-credentials: false
 
       - name: set up rust
-        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
-        with:
-          install_args: rust github:llvm/llvm-project
-          cache: false
+        run: rustup toolchain install nightly --profile minimal --component rustfmt --component clippy
+
+      - name: install libclang
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libclang-dev
 
       - name: check formatting, lints, and tests
-        run: mise run check
+        shell: bash
+        run: |
+          cargo fmt --check
+          cargo clippy --all-targets --locked
+          cargo test --locked

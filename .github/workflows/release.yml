@@ -8,7 +8,7 @@ on:
 permissions: {}
 
 env:
-  MISE_AUTO_INSTALL: "false"
+  RUSTUP_TOOLCHAIN: nightly
 
 jobs:
   create:
@@ -44,10 +44,7 @@ jobs:
           persist-credentials: false
 
       - name: set up rust
-        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
-        with:
-          install_args: rust
-          cache: false
+        run: rustup toolchain install nightly --profile minimal
 
       - name: build and upload binary
         uses: taiki-e/upload-rust-binary-action@f0d45ae91ee7b8ee928de7a9d04d893a08bcbec6 # v1.30.2
