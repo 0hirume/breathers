@@ -216,7 +216,7 @@ fn block(node: NodeIndex, tree: &Tree<'_>) -> Option<Rule> {
         NodeKind::Repeat { .. } => Some(Rule::RepeatLoops),
         NodeKind::NumericFor { .. } | NodeKind::GenericFor { .. } => Some(Rule::ForLoops),
         NodeKind::Do { .. } => Some(Rule::DoBlocks),
-        NodeKind::Function { .. } => Some(Rule::Functions),
+        NodeKind::Function { body: Some(_), .. } => Some(Rule::Functions),
         NodeKind::Class { .. } => Some(Rule::Classes),
         _ => None,
     }
@@ -720,6 +720,7 @@ mod tests {
             "local value = 1 --[[first\nsecond]]\nwork()\n",
             "local first = 1; if first > 0 then work() end; finish()\n",
             "local first = 1\nlocal second = 2\n",
+            "declare function first(): number\ndeclare function second(): string\n",
         ] {
             assert_eq!(breathe(source).unwrap(), source);
         }
