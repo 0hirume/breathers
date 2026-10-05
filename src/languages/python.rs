@@ -127,6 +127,14 @@ fn visit(node: Node<'_>, source: &str, rules: &Rules, insertions: &mut BTreeSet<
                 };
 
                 if separate
+                    && ![left, *child].into_iter().all(|statement| {
+                        matches!(
+                            statement.kind(),
+                            "import_statement"
+                                | "import_from_statement"
+                                | "future_import_statement"
+                        )
+                    })
                     && !(node.kind() == "block"
                         && node
                             .parent()
@@ -215,6 +223,25 @@ mod tests {
         let expected = source
             .replace("    def method", "\n    def method")
             .replace("        return", "\n        return");
+
+        assert_eq!(super::breathe(source, &rules).unwrap(), expected);
+    }
+
+    #[test]
+    fn preserves_import_groups() {
+        let rules = Rules::default();
+
+        for source in [
+            "import example\nfrom other import (\n    first,\n)\nimport another\n",
+            "from example import (\n    first,\n)\nfrom other import (\n    second,\n)\nfrom third import item\n",
+            "from __future__ import annotations\nfrom __future__ import (\n    generator_stop,\n)\n",
+            "from __future__ import annotations\n\nimport example\n\nfrom .other import (\n    first,\n)\nfrom .third import second\n\nif TYPE_CHECKING:\n    from .other import (\n        Example,\n    )\n    from .third import Other\n",
+        ] {
+            assert_eq!(super::breathe(source, &rules).unwrap(), source);
+        }
+
+        let source = "from example import (\n    first,\n)\nvalue = 1\n";
+        let expected = source.replace("value = 1", "\nvalue = 1");
 
         assert_eq!(super::breathe(source, &rules).unwrap(), expected);
     }
