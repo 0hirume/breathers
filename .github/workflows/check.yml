@@ -30,6 +30,9 @@ jobs:
       - name: set up rust
         run: rustup toolchain install nightly --profile minimal --component rustfmt --component clippy
 
+      - name: cache rust
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+
       - name: install libclang
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libclang-dev
