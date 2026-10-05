@@ -8,6 +8,29 @@ fn opaque(node: Node<'_>) -> bool {
     matches!(node.kind(), "comment" | "string" | "concatenated_string")
 }
 
+fn docstring(node: Node<'_>, source: &str) -> bool {
+    match node.kind() {
+        "expression_statement" => node
+            .named_child(0)
+            .is_some_and(|child| docstring(child, source)),
+
+        "concatenated_string" => {
+            let mut cursor = node.walk();
+
+            node.named_children(&mut cursor)
+                .all(|child| docstring(child, source))
+        }
+
+        "string" => node.named_child(0).is_some_and(|start| {
+            source[start.byte_range()]
+                .bytes()
+                .all(|byte| matches!(byte, b'\'' | b'"' | b'r' | b'R' | b'u' | b'U'))
+        }),
+
+        _ => false,
+    }
+}
+
 fn block(node: Node<'_>) -> Option<Rule> {
     match node.kind() {
         "if_statement" => Some(Rule::Conditionals),
@@ -104,6 +127,14 @@ fn visit(node: Node<'_>, source: &str, rules: &Rules, insertions: &mut BTreeSet<
                 };
 
                 if separate
+                    && !(node.kind() == "block"
+                        && node
+                            .parent()
+                            .is_some_and(|parent| parent.kind() == "function_definition")
+                        && children[..previous]
+                            .iter()
+                            .all(|child| child.kind() == "comment")
+                        && docstring(left, source))
                     && !(rules.enabled(Rule::Related)
                         && crate::syntax::related(left, *child, source))
                     && let Some(offset) = crate::syntax::boundary(
@@ -161,6 +192,31 @@ mod tests {
         }
 
         assert!(super::breathe("def broken(:\n", &rules).is_err());
+    }
+
+    #[test]
+    fn preserves_function_docstring_boundaries() {
+        let rules = Rules::default();
+
+        for statement in [
+            "return 1\n",
+            "if ready:\n        work()\n",
+            "save(\n        value,\n    )\n",
+            "values = [\n        1,\n    ]\n",
+        ] {
+            let source =
+                format!("def example():\n    \"\"\"Describe the result.\"\"\"\n    {statement}");
+
+            assert_eq!(super::breathe(&source, &rules).unwrap(), source);
+        }
+
+        let source = "class Example:\n    \"\"\"Describe the class.\"\"\"\n    def method(self):\n        \"\"\"Describe the result.\"\"\"\n        value = 1\n        return value\n";
+
+        let expected = source
+            .replace("    def method", "\n    def method")
+            .replace("        return", "\n        return");
+
+        assert_eq!(super::breathe(source, &rules).unwrap(), expected);
     }
 
     #[test]
