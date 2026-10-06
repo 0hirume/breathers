@@ -327,11 +327,17 @@ impl Formatter<'_, '_> {
             return;
         };
 
-        let Some(declaration) = self.range(parent) else {
+        let Some(location) = parent.get_location() else {
             return;
         };
 
-        if !self.source[declaration.start..opening.range.start].contains('\n') {
+        let location = location.get_expansion_location();
+        let start = location.offset as usize;
+
+        if location.file != Some(self.file)
+            || start > opening.range.start
+            || !self.source[start..opening.range.start].contains('\n')
+        {
             return;
         }
 
@@ -669,6 +675,38 @@ mod tests {
             super::breathe(&windows, None, &rules, "c++").unwrap(),
             windows
         );
+    }
+
+    #[test]
+    fn leaves_first_statement_adjacent_after_wrapped_return_type() {
+        let rules = crate::configuration::Rules::default();
+
+        for (source, language) in [
+            (
+                "int\nexample(const int *value) {\n    if (!value) {\n        return 0;\n    }\n\n    return *value;\n}\n",
+                "c",
+            ),
+            (
+                "int\nexample(const int *value) {\n    if (!value) {\n        return 0;\n    }\n\n    return *value;\n}\n",
+                "c++",
+            ),
+            (
+                "struct Example {\n    int resolve(const int *value);\n};\n\nint\nExample::resolve(const int *value) {\n    if (!value) {\n        return 0;\n    }\n\n    return *value;\n}\n",
+                "c++",
+            ),
+        ] {
+            assert_eq!(
+                super::breathe(source, None, &rules, language).unwrap(),
+                source
+            );
+
+            let windows = source.replace('\n', "\r\n");
+
+            assert_eq!(
+                super::breathe(&windows, None, &rules, language).unwrap(),
+                windows
+            );
+        }
     }
 
     #[test]
