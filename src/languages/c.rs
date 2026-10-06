@@ -291,61 +291,6 @@ impl Formatter<'_, '_> {
             .filter(|offset| !self.macros.iter().any(|range| range.contains(offset)))
     }
 
-    fn space_first_statement(&mut self, entity: Entity<'_>, child: Entity<'_>) {
-        if entity.get_kind() != EntityKind::CompoundStmt || !self.complex(child) {
-            return;
-        }
-
-        let Some(parent) = entity.get_semantic_parent() else {
-            return;
-        };
-
-        if !matches!(
-            parent.get_kind(),
-            EntityKind::FunctionDecl
-                | EntityKind::FunctionTemplate
-                | EntityKind::Method
-                | EntityKind::Constructor
-                | EntityKind::Destructor
-        ) {
-            return;
-        }
-
-        let Some(current) = self.range(child) else {
-            return;
-        };
-
-        let Some(body) = self.range(entity) else {
-            return;
-        };
-
-        let Some(opening) = self
-            .tokens(&body)
-            .iter()
-            .find(|token| &self.source[token.range.clone()] == "{")
-        else {
-            return;
-        };
-
-        let Some(location) = parent.get_location() else {
-            return;
-        };
-
-        let location = location.get_expansion_location();
-        let start = location.offset as usize;
-
-        if location.file != Some(self.file)
-            || start > opening.range.start
-            || !self.source[start..opening.range.start].contains('\n')
-        {
-            return;
-        }
-
-        if let Some(offset) = self.boundary(opening.range.end, current.start) {
-            self.insertions.insert(offset);
-        }
-    }
-
     fn visit(&mut self, entity: Entity<'_>, root: bool) {
         if self.opaque(entity) || entity.get_kind() == EntityKind::CallExpr {
             return;
@@ -356,10 +301,6 @@ impl Formatter<'_, '_> {
             .into_iter()
             .filter(|child| self.range(*child).is_some())
             .collect();
-
-        if let Some(child) = children.first() {
-            self.space_first_statement(entity, *child);
-        }
 
         if root
             || matches!(
@@ -612,41 +553,37 @@ mod tests {
     }
 
     #[test]
-    fn spaces_first_control_flow_statement() {
-        let source = "int resolve(\n    const int *from, int *expression, const int &) {\n    if (!from) {\n        return 0;\n    }\n    return expression ? *from : 0;\n}\n";
-
-        let expected = source
-            .replace(") {\n    if", ") {\n\n    if")
-            .replace("}\n    return expression", "}\n\n    return expression");
-
+    fn keeps_first_control_flow_statement_adjacent() {
+        let source = "int resolve(\n    const int *from, int *expression, const int *limits\n) {\n    if (!from) {\n        return 0;\n    }\n    return expression ? *from : 0;\n}\n";
+        let expected = source.replace("}\n    return expression", "}\n\n    return expression");
         let rules = crate::configuration::Rules::default();
 
-        assert_eq!(
-            super::breathe(source, None, &rules, "c++").unwrap(),
-            expected
-        );
+        for language in ["c", "c++"] {
+            assert_eq!(
+                super::breathe(source, None, &rules, language).unwrap(),
+                expected
+            );
 
-        assert_eq!(
-            super::breathe(&expected, None, &rules, "c++").unwrap(),
-            expected
-        );
+            assert_eq!(
+                super::breathe(&expected, None, &rules, language).unwrap(),
+                expected
+            );
 
-        assert_eq!(
-            super::breathe(&source.replace('\n', "\r\n"), None, &rules, "c++").unwrap(),
-            expected.replace('\n', "\r\n")
-        );
+            assert_eq!(
+                super::breathe(&source.replace('\n', "\r\n"), None, &rules, language).unwrap(),
+                expected.replace('\n', "\r\n")
+            );
+        }
     }
 
     #[test]
-    fn spaces_first_control_flow_statement_in_method() {
+    fn keeps_first_control_flow_statement_adjacent_in_method() {
         let source = "struct Sources {\n    int resolve(\n        int *from, int *expression, int &) {\n        if (!from) {\n            return 0;\n        }\n        return expression ? *from : 0;\n    }\n};\n";
 
-        let expected = source
-            .replace(") {\n        if", ") {\n\n        if")
-            .replace(
-                "}\n        return expression",
-                "}\n\n        return expression",
-            );
+        let expected = source.replace(
+            "}\n        return expression",
+            "}\n\n        return expression",
+        );
 
         let rules = crate::configuration::Rules::default();
 
