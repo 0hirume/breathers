@@ -178,6 +178,75 @@ fn formats_cplusplus_with_clangd_flags_and_buffer_contents() {
 }
 
 #[test]
+fn formats_c_with_compilation_database_flags() {
+    use serde_json::json;
+
+    let root = directory();
+    fs::create_dir_all(root.join("build folder/include")).unwrap();
+    fs::create_dir(root.join("nested")).unwrap();
+    fs::write(root.join("breathers.toml"), "").unwrap();
+
+    fs::write(
+        root.join(".clangd"),
+        "CompileFlags:\n  Add: [-UENABLED, -DENABLED=3]\n",
+    )
+    .unwrap();
+
+    fs::write(
+        root.join("build folder/include/value.h"),
+        "#if ENABLED != 3\n#error missing override\n#endif\n#define VALUE 1\n",
+    )
+    .unwrap();
+
+    let path = root.join("nested/source.c");
+
+    let source =
+        "#include <value.h>\nint example(void) {\n    int value = VALUE;\n    return value;\n}\n";
+
+    let expected = source.replace("    return", "\n    return");
+
+    let mut entries = vec![
+        json!({"directory": root.join("build folder"), "file": "../nested/source.c",
+            "arguments": ["clang", "-Iinclude", "-DENABLED=2", "-c", "../nested/source.c", "-o", "ignored.o"]}),
+        json!({"directory": root.join("build folder"), "file": path,
+            "command": "clang -I\"include\" -DENABLED=2 -c \"../nested/source.c\" -o ignored.o"}),
+    ];
+
+    if cfg!(windows) {
+        entries.push(json!({"directory": root.join("build folder"), "file": path,
+            "command": "cl.exe /nologo /TC /I\"include\" /DENABLED=2 /c \"../nested/source.c\" /Foignored.obj"}));
+    }
+
+    for entry in entries {
+        fs::write(
+            root.join("compile_commands.json"),
+            json!([entry]).to_string(),
+        )
+        .unwrap();
+
+        fs::write(&path, source).unwrap();
+        let output = input(&root, &["nested/source.c"], b"");
+
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+
+        assert_eq!(fs::read_to_string(&path).unwrap(), expected);
+        assert!(!root.join("build folder/ignored.o").exists());
+        assert!(!root.join("build folder/ignored.obj").exists());
+    }
+
+    fs::write(root.join("compile_commands.json"), "[").unwrap();
+    let output = input(&root, &["nested/source.c"], b"");
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("compile_commands.json"));
+    assert_eq!(fs::read_to_string(&path).unwrap(), expected);
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn formats_c_preprocessing_and_rejects_active_errors() {
     let root = directory();
     fs::create_dir(root.join("include")).unwrap();

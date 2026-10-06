@@ -1,4 +1,7 @@
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use regex::Regex;
 use serde::Deserialize;
@@ -82,9 +85,100 @@ fn extend(source: &str, relative: &str, arguments: &mut Vec<String>) -> Result<(
     Ok(())
 }
 
+fn database(path: &Path) -> Result<Option<(PathBuf, Vec<String>)>, String> {
+    let source = fs::canonicalize(path).unwrap_or_else(|_| path.to_owned());
+
+    for directory in path.ancestors().skip(1) {
+        let configuration = directory.join("compile_commands.json");
+
+        if !configuration
+            .try_exists()
+            .map_err(|error| format!("{}: {error}", configuration.display()))?
+        {
+            continue;
+        }
+
+        let contents = fs::read(&configuration)
+            .map_err(|error| format!("{}: {error}", configuration.display()))?;
+
+        let entries: Vec<serde_json::Value> = serde_json::from_slice(&contents)
+            .map_err(|error| format!("{}: {error}", configuration.display()))?;
+
+        let database = clang::CompilationDatabase::from_directory(directory).map_err(|()| {
+            format!(
+                "{}: could not load compilation database",
+                configuration.display()
+            )
+        })?;
+
+        if database.get_all_compile_commands().get_commands().len() != entries.len() {
+            return Err(format!(
+                "{}: invalid compilation commands",
+                configuration.display()
+            ));
+        }
+
+        let Ok(commands) = database.get_compile_commands(path) else {
+            return Ok(None);
+        };
+
+        let commands = commands.get_commands();
+
+        let Some(command) = commands.first() else {
+            return Ok(None);
+        };
+
+        let directory = directory.join(command.get_directory());
+        let mut arguments = command.get_arguments().into_iter();
+
+        let compiler = arguments
+            .next()
+            .ok_or("Compilation command has no compiler")?;
+
+        let compiler = Path::new(&compiler)
+            .file_stem()
+            .and_then(|name| name.to_str());
+
+        let mut flags = Vec::new();
+
+        if matches!(compiler, Some("cl" | "clang-cl")) {
+            flags.push("--driver-mode=cl".to_owned());
+        }
+
+        for argument in arguments {
+            let candidate = directory.join(&argument);
+
+            if argument != "--" && fs::canonicalize(&candidate).unwrap_or(candidate) != source {
+                flags.push(argument);
+            }
+        }
+
+        return Ok(Some((directory, flags)));
+    }
+
+    Ok(None)
+}
+
 pub fn arguments(path: &Path) -> Result<Vec<String>, String> {
     let directory = path.parent().ok_or("Source path has no parent directory")?;
-    let mut arguments = Vec::new();
+
+    let (working_directory, mut arguments) =
+        database(path)?.unwrap_or_else(|| (directory.to_owned(), Vec::new()));
+
+    let prefix = if arguments
+        .iter()
+        .any(|argument| argument == "--driver-mode=cl")
+    {
+        "/clang:"
+    } else {
+        ""
+    };
+
+    arguments.push(format!(
+        "{prefix}-working-directory={}",
+        working_directory.display()
+    ));
+
     let ancestors: Vec<_> = directory.ancestors().collect();
 
     for directory in ancestors.into_iter().rev() {

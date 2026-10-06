@@ -65,9 +65,9 @@ breathers --lsp
 
 C and C++ formatting uses LLVM's `libclang`, loaded at runtime. Make the shared library discoverable or set `LIBCLANG_PATH` to its directory. Other languages do not require it.
 
-Compiler flags come from ancestor `.clangd` files, applied from parent to child. Supported settings are `CompileFlags.Add`, `If.PathMatch`, and `If.PathExclude`, including multiple YAML documents. Conditions match paths relative to their `.clangd` directory; relative include paths use the source file's directory. Other `CompileFlags` settings produce an error. Stdin uses `source.c` for C or `source.cpp` for C++ in the working directory for this discovery; LSP uses the document path and buffer contents.
+Compiler flags come from the nearest ancestor `compile_commands.json`, supporting both `arguments` arrays and quoted `command` strings. Clang selects the source file's command and uses its working directory for relative paths. Ancestor `.clangd` files then add overrides from parent to child. Supported settings are `CompileFlags.Add`, `If.PathMatch`, and `If.PathExclude`, including multiple YAML documents. Conditions match paths relative to their `.clangd` directory; without a compilation command, relative compiler paths use the source file's directory. Other `CompileFlags` settings produce an error. Stdin uses `source.c` for C or `source.cpp` for C++ in the working directory for this discovery; LSP uses the document path and buffer contents.
 
-Clang expands macros and parses active conditional branches. Inactive branches and macro contents are left unchanged. C compiler errors, including missing headers or declarations, are reported without writing changes; supply the project's include paths and defines through `.clangd`.
+Clang expands macros and parses active conditional branches. Inactive branches and macro contents are left unchanged. C compiler errors, including missing headers or declarations, are reported without writing changes; supply the project's include paths and defines through its compilation database or `.clangd`.
 
 C++ retains a Tree-sitter syntax-only fallback when Clang reports errors, preserving formatting for snippets with unresolved names. If both parsers reject the source, Clang diagnostics are reported and the file is left unchanged.
 

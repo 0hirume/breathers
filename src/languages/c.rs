@@ -483,22 +483,6 @@ pub fn breathe(
         name.strip_prefix(r"\\?\").unwrap_or(name).to_owned()
     });
 
-    let mut arguments = crate::compilation::arguments(&path)?;
-
-    if language == "c++" && cfg!(windows) {
-        arguments.push("-fno-delayed-template-parsing".into());
-    }
-
-    arguments.extend([
-        "-x".into(),
-        language.into(),
-        "-working-directory".into(),
-        path.parent()
-            .ok_or("Source path has no directory")?
-            .to_string_lossy()
-            .into_owned(),
-    ]);
-
     let mut guard = PARSER.lock().map_err(|error| error.to_string())?;
 
     if let Some(error) = guard.as_ref() {
@@ -508,6 +492,14 @@ pub fn breathe(
     let clang = Clang::new().inspect_err(|error| {
         *guard = Some(error.clone());
     })?;
+
+    let mut arguments = crate::compilation::arguments(&path)?;
+
+    if language == "c++" && cfg!(windows) {
+        arguments.push("-fno-delayed-template-parsing".into());
+    }
+
+    arguments.extend(["-x".into(), language.into()]);
 
     let index = Index::new(&clang, false, false);
 
