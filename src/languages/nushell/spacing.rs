@@ -7,6 +7,8 @@ use crate::{
     syntax::{self, Pair, Policy, multiline, rule},
 };
 
+const WRAPPERS: &[&str] = &["pipeline", "pipe_element"];
+
 pub(crate) fn breathe(source: &str, rules: &Rules) -> Result<String, String> {
     let policy = Policy {
         opaque,
@@ -72,28 +74,8 @@ fn opaque(node: Node<'_>) -> bool {
     )
 }
 
-fn statement(mut node: Node<'_>) -> Node<'_> {
-    while matches!(node.kind(), "pipeline" | "pipe_element") {
-        let mut cursor = node.walk();
-
-        let mut children = node
-            .named_children(&mut cursor)
-            .filter(|child| child.kind() != "comment");
-
-        let Some(child) = children.next() else { break };
-
-        if children.next().is_some() {
-            break;
-        }
-
-        node = child;
-    }
-
-    node
-}
-
 fn block(node: Node<'_>) -> Option<Rule> {
-    let node = statement(node);
+    let node = syntax::statement(node, WRAPPERS);
 
     match node.kind() {
         "stmt_let" | "stmt_mut" | "stmt_const" => node.child_by_field_name("value").and_then(block),
@@ -150,7 +132,7 @@ fn complex(node: Node<'_>, source: &str, rules: &Rules) -> bool {
 }
 
 fn returns(node: Node<'_>, source: &str) -> bool {
-    let node = statement(node);
+    let node = syntax::statement(node, WRAPPERS);
 
     node.kind() == "command"
         && node

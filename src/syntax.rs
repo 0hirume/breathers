@@ -105,6 +105,26 @@ pub(crate) fn multiline(node: Node<'_>, source: &str, opaque: fn(Node<'_>) -> bo
     node.child_count() > 0 && source[previous..node.end_byte()].contains('\n')
 }
 
+pub(crate) fn statement<'tree>(mut node: Node<'tree>, wrappers: &[&str]) -> Node<'tree> {
+    while wrappers.contains(&node.kind()) {
+        let mut cursor = node.walk();
+
+        let mut children = node
+            .named_children(&mut cursor)
+            .filter(|child| child.kind() != "comment");
+
+        let Some(child) = children.next() else { break };
+
+        if children.next().is_some() {
+            break;
+        }
+
+        node = child;
+    }
+
+    node
+}
+
 fn visit(
     node: Node<'_>,
     source: &str,

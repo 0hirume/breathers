@@ -2,33 +2,17 @@ use std::iter::from_fn;
 
 use tree_sitter::Node;
 
+use crate::syntax;
+
+pub(super) const WRAPPERS: &[&str] = &["pipeline", "assignment_value"];
+
 pub(super) fn related(previous: Node<'_>, next: Node<'_>, source: &str) -> bool {
-    let previous = statement(previous);
+    let previous = syntax::statement(previous, WRAPPERS);
 
     previous.kind() == "assignment_expression"
         && previous
             .named_child(0)
             .is_some_and(|target| dependencies(target, next, source))
-}
-
-pub(super) fn statement(mut node: Node<'_>) -> Node<'_> {
-    while matches!(node.kind(), "pipeline" | "assignment_value") {
-        let mut cursor = node.walk();
-
-        let mut children = node
-            .named_children(&mut cursor)
-            .filter(|child| child.kind() != "comment");
-
-        let Some(child) = children.next() else { break };
-
-        if children.next().is_some() {
-            break;
-        }
-
-        node = child;
-    }
-
-    node
 }
 
 fn variable(source: &str) -> impl Iterator<Item = char> + '_ {

@@ -1,6 +1,6 @@
 use tree_sitter::Node;
 
-use super::dependencies::{self, statement};
+use super::dependencies::{self, WRAPPERS};
 
 use crate::{
     configuration::{Rule, Rules},
@@ -81,7 +81,7 @@ fn opaque(node: Node<'_>) -> bool {
 }
 
 fn block(node: Node<'_>) -> Option<Rule> {
-    let node = statement(node);
+    let node = syntax::statement(node, WRAPPERS);
 
     match node.kind() {
         "assignment_expression" => node.child_by_field_name("value").and_then(block),
@@ -129,7 +129,7 @@ fn complex(node: Node<'_>, source: &str, rules: &Rules) -> bool {
     if let Some(rule) = block(node) {
         rules.enabled(rule)
     } else {
-        let fallback = if statement(node).kind() == "assignment_expression" {
+        let fallback = if syntax::statement(node, WRAPPERS).kind() == "assignment_expression" {
             Rule::Declarations
         } else {
             Rule::Multiline
