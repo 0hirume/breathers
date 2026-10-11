@@ -1,6 +1,6 @@
 use std::{collections::BTreeSet, ops::Range};
 
-use tree_sitter::{Language, Node, Parser};
+use tree_sitter::{Language, Node, Parser, Tree};
 
 use crate::{
     configuration::{Rule, Rules},
@@ -39,6 +39,16 @@ pub(crate) fn breathe(
 
     let tree = parser.parse(source, None).ok_or("Could not parse source")?;
 
+    format(source, &tree, rules, policy, protected)
+}
+
+pub(crate) fn format(
+    source: &str,
+    tree: &Tree,
+    rules: &Rules,
+    policy: &Policy,
+    protected: &[Range<usize>],
+) -> Result<String, String> {
     if tree.root_node().has_error() {
         return Err("Syntax errors; no changes written".into());
     }

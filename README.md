@@ -42,7 +42,7 @@ mise use -g github:0hirume/breathers
 
 Or download a binary for your platform from [GitHub Releases](https://github.com/0hirume/breathers/releases), extract it, and place it on your `PATH`.
 
-To build from source with Cargo, install Rust and a C/C++ compiler:
+To build from source with Cargo, install Rust and a C/C++ compiler for the Tree-sitter dependencies:
 
 ```sh
 cargo install --git https://github.com/0hirume/breathers --locked
@@ -67,7 +67,7 @@ breathers src/main.rs src/main.luau
 | `--verbose`                   | `-v`  | Show progress and unchanged files                                                    |
 | `--include PATTERN`           | `-i`  | Replace configured includes; repeat for multiple globs                               |
 | `--exclude PATTERN`           | `-e`  | Add exclusions; repeat for multiple globs                                            |
-| `--stdin-filepath PATH`       | `-f`  | Give stdin a language, configuration, and compiler context without writing that path |
+| `--stdin-filepath PATH`       | `-f`  | Give stdin a language and configuration without writing that path                   |
 | `--json`                      | `-j`  | Print a JSON report to stdout                                                        |
 | `--color auto\|always\|never` | `-C`  | Control diagnostic colors; automatic colors respect terminals and `NO_COLOR`         |
 | `--language LANGUAGE`         | `-l`  | Override language detection                                                          |
@@ -115,11 +115,7 @@ breathers -f src/module.luau -
 
 ## C and C++
 
-C and C++ require LLVM's `libclang` shared library. Install it and set `LIBCLANG_PATH` to its directory if breathers cannot find it.
-
-breathers reads compiler flags from the nearest `compile_commands.json`. It also reads `.clangd` files in parent directories, which can add flags with `CompileFlags.Add`. Use `If.PathMatch` and `If.PathExclude` to select which files receive those flags. breathers rejects other compiler-flag settings.
-
-For missing headers or declarations, supply your project's include paths and defines in those files. C compiler errors leave the file unchanged. C++ also accepts syntactically valid snippets with unresolved names. Inactive branches and macro contents stay unchanged.
+breathers formats C and C++ source syntax with Tree-sitter. Macro text and the bodies of literal `#if 0` branches stay unchanged. Other conditional branches are formatted as source syntax. Syntax errors leave files unchanged.
 
 ## Configuration
 

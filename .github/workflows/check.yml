@@ -33,17 +33,6 @@ jobs:
       - name: cache rust
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
 
-      - name: install libclang
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libclang-dev
-
-      - name: update libclang
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          choco upgrade llvm --yes
-          "LIBCLANG_PATH=$env:ProgramFiles\LLVM\bin" >> $env:GITHUB_ENV
-
       - name: check formatting, lints, and tests
         shell: bash
         run: |

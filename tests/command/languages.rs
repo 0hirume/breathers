@@ -328,6 +328,108 @@ fn detects_powershell_extensions_recursively() {
     }
 }
 
+#[test]
+fn formats_cplusplus_source_and_standard_input() {
+    let workspace = Workspace::new();
+    let root = workspace.path();
+    fs::create_dir(root.join("bridge")).unwrap();
+
+    let source = include_str!("../fixtures/cplusplus/command/source/input.cpp");
+    let expected = include_str!("../fixtures/cplusplus/command/source/output.cpp");
+    let path = root.join("bridge/source.cpp");
+    fs::write(&path, source).unwrap();
+    let buffer = source.replace("first", "second");
+
+    let output = workspace.input(
+        &["--stdin-filepath", "bridge/source.cpp", "-"],
+        buffer.as_bytes(),
+    );
+
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert_eq!(
+        output.stdout,
+        include_str!("../fixtures/cplusplus/command/source/buffer.cpp").as_bytes()
+    );
+
+    assert_eq!(fs::read_to_string(&path).unwrap(), source);
+
+    for _ in 0..2 {
+        let output = workspace.input(&["bridge/source.cpp"], b"");
+
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+
+        assert_eq!(fs::read_to_string(&path).unwrap(), expected);
+    }
+}
+
+#[test]
+fn formats_c_source() {
+    let workspace = Workspace::new();
+    let root = workspace.path();
+    fs::create_dir(root.join("nested")).unwrap();
+    let path = root.join("nested/source.c");
+
+    let source = include_str!("../fixtures/c/command/source/input.c");
+    let expected = include_str!("../fixtures/c/command/source/output.c");
+    fs::write(&path, source).unwrap();
+    let output = workspace.input(&["nested/source.c"], b"");
+
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert_eq!(fs::read_to_string(&path).unwrap(), expected);
+}
+
+#[test]
+fn formats_c_source_and_rejects_syntax_errors() {
+    let workspace = Workspace::new();
+    let root = workspace.path();
+    let source = include_str!("../fixtures/c/command/preprocessing/input.c");
+    let expected = include_str!("../fixtures/c/command/preprocessing/output.c");
+    let path = root.join("source.c");
+    fs::write(&path, source).unwrap();
+
+    for _ in 0..2 {
+        let output = workspace.input(&["source.c"], b"");
+
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+
+        assert_eq!(fs::read_to_string(&path).unwrap(), expected);
+    }
+
+    let output = workspace.input(&["-l", "c", "-"], source.as_bytes());
+
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert_eq!(output.stdout, expected.as_bytes());
+
+    let invalid = source.replace("return class;", "return class +;");
+    fs::write(&path, &invalid).unwrap();
+    let output = workspace.input(&["source.c"], b"");
+    assert!(!output.status.success());
+    assert_eq!(fs::read_to_string(&path).unwrap(), invalid);
+}
+
 fn workspace_with_sources() -> Workspace {
     let workspace = Workspace::new();
     let root = workspace.path();

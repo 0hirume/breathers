@@ -594,9 +594,7 @@ fn keeps_adjacent_dependencies_together_without_removing_blank_lines() {
             toml::from_str(&format!("[\"{section}\"]\nrelated = true\n")).unwrap();
 
         assert_eq!(
-            language
-                .format(source, &Configuration::default(), None)
-                .unwrap(),
+            language.format(source, &Configuration::default()).unwrap(),
             baseline,
             "{section}: {source}"
         );
@@ -605,24 +603,18 @@ fn keeps_adjacent_dependencies_together_without_removing_blank_lines() {
         assert!(baseline.contains(&boundary), "{section}: {source}");
 
         assert_eq!(
-            language.format(source, &configuration, None).unwrap(),
+            language.format(source, &configuration).unwrap(),
             expected,
             "{section}: {source}"
         );
 
-        assert_eq!(
-            language.format(expected, &configuration, None).unwrap(),
-            expected
-        );
+        assert_eq!(language.format(expected, &configuration).unwrap(), expected);
 
-        assert_eq!(
-            language.format(baseline, &configuration, None).unwrap(),
-            baseline
-        );
+        assert_eq!(language.format(baseline, &configuration).unwrap(), baseline);
 
         assert_eq!(
             language
-                .format(&source.replace('\n', "\r\n"), &configuration, None)
+                .format(&source.replace('\n', "\r\n"), &configuration)
                 .unwrap(),
             expected.replace('\n', "\r\n")
         );
@@ -640,7 +632,7 @@ return second
     let configuration = toml::from_str("[luau]\nrelated = true\n").unwrap();
 
     assert_eq!(
-        Language::Luau.format(source, &configuration, None).unwrap(),
+        Language::Luau.format(source, &configuration).unwrap(),
         source
     );
 
@@ -648,7 +640,7 @@ return second
 
     assert_ne!(
         Language::Luau
-            .format(source, &Configuration::default(), None)
+            .format(source, &Configuration::default())
             .unwrap(),
         source
     );
@@ -661,9 +653,7 @@ fn related_ignores_properties_literals_writes_and_nested_scopes() {
             toml::from_str(&format!("[\"{section}\"]\nrelated = true\n")).unwrap();
 
         assert_eq!(
-            language
-                .format(source, &Configuration::default(), None)
-                .unwrap(),
+            language.format(source, &Configuration::default()).unwrap(),
             expected,
             "{section}: {source}"
         );
@@ -671,7 +661,7 @@ fn related_ignores_properties_literals_writes_and_nested_scopes() {
         assert_ne!(expected, source, "{section}: {source}");
 
         assert_eq!(
-            language.format(source, &configuration, None).unwrap(),
+            language.format(source, &configuration).unwrap(),
             expected,
             "{section}: {source}"
         );
@@ -690,9 +680,7 @@ fn granular_overrides_take_precedence_in_both_directions() {
     } in OVERRIDES
     {
         assert_eq!(
-            language
-                .format(source, &Configuration::default(), None)
-                .unwrap(),
+            language.format(source, &Configuration::default()).unwrap(),
             formatted,
             "{section}.{specific}"
         );
@@ -711,7 +699,7 @@ fn granular_overrides_take_precedence_in_both_directions() {
             let configuration: Configuration = toml::from_str(&text).unwrap();
 
             assert_eq!(
-                language.format(source, &configuration, None).unwrap(),
+                language.format(source, &configuration).unwrap(),
                 expected,
                 "{text}"
             );
@@ -723,9 +711,7 @@ fn granular_overrides_take_precedence_in_both_directions() {
 fn disables_each_rule_without_removing_existing_blank_lines() {
     for &(language, section, rule, source, formatted) in DISABLING {
         assert_eq!(
-            language
-                .format(source, &Configuration::default(), None)
-                .unwrap(),
+            language.format(source, &Configuration::default()).unwrap(),
             formatted,
             "{section}.{rule}"
         );
@@ -736,13 +722,13 @@ fn disables_each_rule_without_removing_existing_blank_lines() {
             toml::from_str(&format!("[\"{section}\"]\n{rule} = false\n")).unwrap();
 
         assert_eq!(
-            language.format(source, &configuration, None).unwrap(),
+            language.format(source, &configuration).unwrap(),
             source,
             "{section}.{rule}"
         );
 
         assert_eq!(
-            language.format(formatted, &configuration, None).unwrap(),
+            language.format(formatted, &configuration).unwrap(),
             formatted
         );
     }
@@ -789,18 +775,13 @@ fn controls_fields_arms_and_variants_in_new_languages() {
         ),
     ] {
         assert_ne!(
-            language
-                .format(source, &Configuration::default(), None)
-                .unwrap(),
+            language.format(source, &Configuration::default()).unwrap(),
             source
         );
 
         let configuration: Configuration =
             toml::from_str(&format!("[{section}]\n{rule} = false")).unwrap();
 
-        assert_eq!(
-            language.format(source, &configuration, None).unwrap(),
-            source
-        );
+        assert_eq!(language.format(source, &configuration).unwrap(), source);
     }
 }

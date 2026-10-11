@@ -1,29 +1,26 @@
 use crate::configuration::{Configuration, Rules};
 
-use super::Dialect;
-
 #[test]
-fn preserves_inactive_code_with_parser_fallback() {
+fn preserves_inactive_code() {
     let source = include_str!("../../../tests/fixtures/c/preprocessing/input.cpp");
     let expected = include_str!("../../../tests/fixtures/c/preprocessing/output.cpp");
     let rules = Rules::default();
 
     assert_eq!(
-        super::breathe(source, None, &rules, Dialect::CPlusPlus).unwrap(),
+        super::breathe(source, &tree_sitter_cpp::LANGUAGE.into(), &rules).unwrap(),
         expected
     );
 
     assert_eq!(
-        super::breathe(expected, None, &rules, Dialect::CPlusPlus).unwrap(),
+        super::breathe(expected, &tree_sitter_cpp::LANGUAGE.into(), &rules).unwrap(),
         expected
     );
 
     assert_eq!(
         super::breathe(
             &source.replace('\n', "\r\n"),
-            None,
+            &tree_sitter_cpp::LANGUAGE.into(),
             &rules,
-            Dialect::CPlusPlus
         )
         .unwrap(),
         expected.replace('\n', "\r\n")
@@ -39,27 +36,26 @@ fn formats_braced_defaults_and_preserves_source() {
     let rules = Rules::default();
 
     assert_eq!(
-        super::breathe(source, None, &rules, Dialect::CPlusPlus).unwrap(),
+        super::breathe(source, &tree_sitter_cpp::LANGUAGE.into(), &rules).unwrap(),
         expected
     );
 
     assert_eq!(
-        super::breathe(expected, None, &rules, Dialect::CPlusPlus).unwrap(),
+        super::breathe(expected, &tree_sitter_cpp::LANGUAGE.into(), &rules).unwrap(),
         expected
     );
 
     assert_eq!(
         super::breathe(
             &source.replace('\n', "\r\n"),
-            None,
+            &tree_sitter_cpp::LANGUAGE.into(),
             &rules,
-            Dialect::CPlusPlus
         )
         .unwrap(),
         expected.replace('\n', "\r\n")
     );
 
-    super::breathe("int broken( {", None, &rules, Dialect::CPlusPlus).unwrap_err();
+    super::breathe("int broken( {", &tree_sitter_cpp::LANGUAGE.into(), &rules).unwrap_err();
 }
 
 #[test]
@@ -68,19 +64,19 @@ fn keeps_first_control_flow_statement_adjacent() {
     let expected = include_str!("../../../tests/fixtures/c/resolution/output.c");
     let rules = Rules::default();
 
-    for language in [Dialect::C, Dialect::CPlusPlus] {
+    for language in [
+        tree_sitter_c::LANGUAGE.into(),
+        tree_sitter_cpp::LANGUAGE.into(),
+    ] {
+        assert_eq!(super::breathe(source, &language, &rules).unwrap(), expected);
+
         assert_eq!(
-            super::breathe(source, None, &rules, language).unwrap(),
+            super::breathe(expected, &language, &rules).unwrap(),
             expected
         );
 
         assert_eq!(
-            super::breathe(expected, None, &rules, language).unwrap(),
-            expected
-        );
-
-        assert_eq!(
-            super::breathe(&source.replace('\n', "\r\n"), None, &rules, language).unwrap(),
+            super::breathe(&source.replace('\n', "\r\n"), &language, &rules).unwrap(),
             expected.replace('\n', "\r\n")
         );
     }
@@ -95,12 +91,12 @@ fn keeps_first_control_flow_statement_adjacent_in_method() {
     let rules = Rules::default();
 
     assert_eq!(
-        super::breathe(source, None, &rules, Dialect::CPlusPlus).unwrap(),
+        super::breathe(source, &tree_sitter_cpp::LANGUAGE.into(), &rules).unwrap(),
         expected
     );
 
     assert_eq!(
-        super::breathe(expected, None, &rules, Dialect::CPlusPlus).unwrap(),
+        super::breathe(expected, &tree_sitter_cpp::LANGUAGE.into(), &rules).unwrap(),
         expected
     );
 }
@@ -112,14 +108,14 @@ fn leaves_first_constructor_loop_adjacent() {
     let rules = Rules::default();
 
     assert_eq!(
-        super::breathe(source, None, &rules, Dialect::CPlusPlus).unwrap(),
+        super::breathe(source, &tree_sitter_cpp::LANGUAGE.into(), &rules).unwrap(),
         source
     );
 
     let windows = source.replace('\n', "\r\n");
 
     assert_eq!(
-        super::breathe(&windows, None, &rules, Dialect::CPlusPlus).unwrap(),
+        super::breathe(&windows, &tree_sitter_cpp::LANGUAGE.into(), &rules).unwrap(),
         windows
     );
 }
@@ -131,26 +127,23 @@ fn leaves_first_statement_adjacent_after_wrapped_return_type() {
     for (source, language) in [
         (
             include_str!("../../../tests/fixtures/c/returning/input.c"),
-            Dialect::C,
+            tree_sitter_c::LANGUAGE.into(),
         ),
         (
             include_str!("../../../tests/fixtures/c/returning/input.c"),
-            Dialect::CPlusPlus,
+            tree_sitter_cpp::LANGUAGE.into(),
         ),
         (
             include_str!("../../../tests/fixtures/c/member/input.cpp"),
-            Dialect::CPlusPlus,
+            tree_sitter_cpp::LANGUAGE.into(),
         ),
     ] {
-        assert_eq!(
-            super::breathe(source, None, &rules, language).unwrap(),
-            source
-        );
+        assert_eq!(super::breathe(source, &language, &rules).unwrap(), source);
 
         let windows = source.replace('\n', "\r\n");
 
         assert_eq!(
-            super::breathe(&windows, None, &rules, language).unwrap(),
+            super::breathe(&windows, &language, &rules).unwrap(),
             windows
         );
     }
@@ -163,14 +156,14 @@ fn leaves_first_statement_adjacent_for_single_line_header() {
     let rules = Rules::default();
 
     assert_eq!(
-        super::breathe(source, None, &rules, Dialect::CPlusPlus).unwrap(),
+        super::breathe(source, &tree_sitter_cpp::LANGUAGE.into(), &rules).unwrap(),
         source
     );
 
     let windows = source.replace('\n', "\r\n");
 
     assert_eq!(
-        super::breathe(&windows, None, &rules, Dialect::CPlusPlus).unwrap(),
+        super::breathe(&windows, &tree_sitter_cpp::LANGUAGE.into(), &rules).unwrap(),
         windows
     );
 }
@@ -187,7 +180,7 @@ fn respects_related_reads_and_shadowed_bindings() {
 ";
 
     assert_eq!(
-        super::breathe(source, None, rules, Dialect::CPlusPlus).unwrap(),
+        super::breathe(source, &tree_sitter_cpp::LANGUAGE.into(), rules).unwrap(),
         source
     );
 
@@ -201,11 +194,11 @@ fn respects_related_reads_and_shadowed_bindings() {
             "    for",
         ),
     ] {
-        let formatted = super::breathe(source, None, rules, Dialect::CPlusPlus).unwrap();
+        let formatted = super::breathe(source, &tree_sitter_cpp::LANGUAGE.into(), rules).unwrap();
         assert!(formatted.contains(&format!("\n\n{next}")), "{formatted}");
 
         assert_eq!(
-            super::breathe(&formatted, None, rules, Dialect::CPlusPlus).unwrap(),
+            super::breathe(&formatted, &tree_sitter_cpp::LANGUAGE.into(), rules).unwrap(),
             formatted
         );
     }
@@ -216,7 +209,7 @@ fn preserves_macro_arguments() {
     let source = include_str!("../../../tests/fixtures/c/arguments/input.cpp");
 
     assert_eq!(
-        super::breathe(source, None, &Rules::default(), Dialect::CPlusPlus).unwrap(),
+        super::breathe(source, &tree_sitter_cpp::LANGUAGE.into(), &Rules::default()).unwrap(),
         include_str!("../../../tests/fixtures/c/arguments/output.cpp")
     );
 }
@@ -227,7 +220,122 @@ fn preserves_macros_and_literal_contents() {
     let expected = include_str!("../../../tests/fixtures/c/literal/output.cpp");
 
     assert_eq!(
-        super::breathe(source, None, &Rules::default(), Dialect::CPlusPlus).unwrap(),
+        super::breathe(source, &tree_sitter_cpp::LANGUAGE.into(), &Rules::default()).unwrap(),
         expected
     );
+}
+
+fn breathe(source: &str) -> Result<String, String> {
+    super::breathe(source, &tree_sitter_cpp::LANGUAGE.into(), &Rules::default())
+}
+
+#[test]
+fn spaces_cplusplus_statements() {
+    let source = include_str!("../../../tests/fixtures/cplusplus/statements/input.cpp");
+
+    let expected = include_str!("../../../tests/fixtures/cplusplus/statements/output.cpp");
+
+    assert_eq!(breathe(source).unwrap(), expected);
+    assert_eq!(breathe(expected).unwrap(), expected);
+
+    assert_eq!(
+        breathe(&source.replace('\n', "\r\n")).unwrap(),
+        expected.replace('\n', "\r\n")
+    );
+
+    breathe("int broken( {").unwrap_err();
+}
+
+#[test]
+fn preserves_directives_literals_and_macro_arguments() {
+    for (source, expected) in [
+        (
+            r"#define EXAMPLE(x) do { first(); second(); } while (0)
+",
+            r"#define EXAMPLE(x) do { first(); second(); } while (0)
+",
+        ),
+        (
+            r"#define EXAMPLE(x) \
+    first(); \
+    second();
+",
+            r"#define EXAMPLE(x) \
+    first(); \
+    second();
+",
+        ),
+        (
+            include_str!("../../../tests/fixtures/cplusplus/arguments/input.cpp"),
+            include_str!("../../../tests/fixtures/cplusplus/arguments/output.cpp"),
+        ),
+        (
+            include_str!("../../../tests/fixtures/cplusplus/literal/input.cpp"),
+            include_str!("../../../tests/fixtures/cplusplus/literal/input.cpp"),
+        ),
+        (
+            r"void example() { first(); if (ready()) { second(); } third(); }
+",
+            r"void example() { first(); if (ready()) { second(); } third(); }
+",
+        ),
+    ] {
+        assert_eq!(breathe(source).unwrap(), expected);
+    }
+}
+
+#[test]
+fn spaces_fields_cases_and_guarded_code() {
+    let source = include_str!("../../../tests/fixtures/cplusplus/guard/input.cpp");
+
+    assert_eq!(
+        breathe(source).unwrap(),
+        include_str!("../../../tests/fixtures/cplusplus/guard/output.cpp")
+    );
+
+    let source = include_str!("../../../tests/fixtures/cplusplus/fields/input.cpp");
+
+    let expected = include_str!("../../../tests/fixtures/cplusplus/fields/output.cpp");
+
+    assert_eq!(breathe(source).unwrap(), expected);
+
+    let source =
+        include_str!("../../../tests/fixtures/configuration/overrides/cplusplus/switch/before.cpp");
+
+    let expected =
+        include_str!("../../../tests/fixtures/configuration/overrides/cplusplus/switch/after.cpp");
+
+    assert_eq!(breathe(source).unwrap(), expected);
+}
+
+#[test]
+fn protects_inactive_code_without_pruning_active_code() {
+    let source = include_str!("../../../tests/fixtures/cplusplus/inactive/input.cpp");
+    let expected = include_str!("../../../tests/fixtures/cplusplus/inactive/output.cpp");
+
+    assert_eq!(breathe(source).unwrap(), expected);
+
+    assert_eq!(breathe(expected).unwrap(), expected);
+}
+
+#[test]
+fn preserves_macro_invocations_and_formats_surrounding_code() {
+    let source = include_str!("../../../tests/fixtures/c/macros/input.c");
+    let expected = include_str!("../../../tests/fixtures/c/macros/output.c");
+    let rules = Rules::default();
+
+    for language in [
+        tree_sitter_c::LANGUAGE.into(),
+        tree_sitter_cpp::LANGUAGE.into(),
+    ] {
+        assert_eq!(super::breathe(source, &language, &rules).unwrap(), expected);
+
+        assert_eq!(
+            super::breathe(expected, &language, &rules).unwrap(),
+            expected
+        );
+
+        let invalid = source.replace("return value;", "return value +;");
+        super::breathe(&invalid, &language, &rules).unwrap_err();
+    }
 }

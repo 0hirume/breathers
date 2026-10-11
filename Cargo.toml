@@ -10,7 +10,6 @@ categories = ["command-line-utilities", "development-tools"]
 publish = false
 
 [dependencies]
-clang = { version = "2", features = ["runtime"] }
 clap = { version = "4", features = ["derive", "error-context", "help", "std", "usage"] }
 console = { version = "0.16", features = ["std"] }
 dirs = "7"
@@ -18,13 +17,12 @@ globset = "0.4"
 indicatif = "0.18"
 ra_ap_syntax = "0.0"
 rayon = "1"
-regex = "1"
 schemars = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-serde-saphyr = { version = "1", features = ["deserialize"] }
 toml = { version = "1", features = ["parse", "serde", "std"] }
 tree-sitter = "0.27"
+tree-sitter-c = "0.24"
 tree-sitter-cpp = "0.23"
 tree-sitter-javascript = "0.25"
 tree-sitter-lua = "0.5"

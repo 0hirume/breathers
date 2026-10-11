@@ -49,19 +49,17 @@ impl Language {
         self,
         source: &str,
         configuration: &Configuration,
-        path: Option<&Path>,
     ) -> Result<String, String> {
         match self {
             Self::Rust => rust::breathe(source, &configuration.rust),
             Self::Luau => luau::breathe(source, &configuration.luau),
             Self::Lua => lua::breathe(source, &configuration.lua),
-            Self::C => c::breathe(source, path, &configuration.c, c::Dialect::C),
+            Self::C => c::breathe(source, &tree_sitter_c::LANGUAGE.into(), &configuration.c),
 
             Self::CPlusPlus => c::breathe(
                 source,
-                path,
+                &tree_sitter_cpp::LANGUAGE.into(),
                 &configuration.cplusplus,
-                c::Dialect::CPlusPlus,
             ),
 
             Self::Python => python::breathe(source, &configuration.python),
@@ -188,9 +186,7 @@ return value
             ),
         ] {
             assert_eq!(
-                language
-                    .format(source, &Configuration::default(), None)
-                    .unwrap(),
+                language.format(source, &Configuration::default()).unwrap(),
                 expected
             );
         }

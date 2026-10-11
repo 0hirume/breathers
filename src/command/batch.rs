@@ -71,7 +71,7 @@ fn process(
                         .or_else(|| Language::infer(&path))
                         .ok_or("Unknown language; specify --language (-l)")?;
 
-                    let output = language.format(&source, configuration, Some(&path));
+                    let output = language.format(&source, configuration);
 
                     Ok((source, output))
                 });

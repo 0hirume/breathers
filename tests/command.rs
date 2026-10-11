@@ -3,9 +3,6 @@
 #[path = "command/batch.rs"]
 mod batch;
 
-#[path = "command/compilation.rs"]
-mod compilation;
-
 #[path = "command/input.rs"]
 mod input;
 

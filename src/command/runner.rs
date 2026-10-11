@@ -153,7 +153,7 @@ fn stdin(
         io::read_to_string(io::stdin().lock()).map_err(|error| format!("stdin: {error}"))?;
 
     let formatted = language
-        .format(&source, configuration, context)
+        .format(&source, configuration)
         .map_err(|error| format!("stdin: {error}"))?;
 
     let changed = source != formatted;

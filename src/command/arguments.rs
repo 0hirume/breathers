@@ -51,7 +51,7 @@ pub(super) struct Arguments {
         long,
         value_name = "PATH",
         requires = "paths",
-        help = "Use this filepath for stdin language, configuration, and compiler context; never write it"
+        help = "Use this filepath for stdin language and configuration; never write it"
     )]
     pub(super) stdin_filepath: Option<PathBuf>,
 

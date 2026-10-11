@@ -1,7 +1,6 @@
 //! Blank-line spacing for source code.
 
 mod command;
-mod compilation;
 mod configuration;
 mod languages;
 mod spacing;
