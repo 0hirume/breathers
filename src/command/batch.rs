@@ -4,6 +4,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use rayon::iter::{IntoParallelIterator as _, ParallelIterator as _};
+
 use crate::{configuration, languages::Language};
 
 use super::{
@@ -54,7 +56,31 @@ fn process(
 
     let mut changes = Vec::new();
 
-    for path in files {
+    reporting.progress("Checking files...")?;
+
+    let prepared: Vec<_> = files
+        .into_iter()
+        .collect::<Vec<_>>()
+        .into_par_iter()
+        .map(|path| {
+            let result = fs::read_to_string(&path)
+                .map_err(|error| error.to_string())
+                .and_then(|source| {
+                    let language = arguments
+                        .language
+                        .or_else(|| Language::infer(&path))
+                        .ok_or("Unknown language; specify --language (-l)")?;
+
+                    let output = language.format(&source, configuration, Some(&path));
+
+                    Ok((source, output))
+                });
+
+            (path, result)
+        })
+        .collect();
+
+    for (path, result) in prepared {
         let name = path
             .strip_prefix(directory)
             .unwrap_or(&path)
@@ -67,14 +93,9 @@ fn process(
         ))?;
 
         let index = reporting.record(name.clone(), Status::Failed);
-        let source = fs::read_to_string(&path).map_err(|error| format!("{name}\n  {error}"))?;
+        let (source, output) = result.map_err(|error| format!("{name}\n  {error}"))?;
 
-        let language = arguments
-            .language
-            .or_else(|| Language::infer(&path))
-            .ok_or_else(|| format!("{name}\n  Unknown language; specify --language (-l)"))?;
-
-        let output = match language.format(&source, configuration, Some(&path)) {
+        let output = match output {
             Ok(output) => output,
 
             Err(error) => {
