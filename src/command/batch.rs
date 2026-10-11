@@ -2,124 +2,56 @@ use std::{
     collections::BTreeSet,
     env, fs,
     path::{Path, PathBuf},
-    process::ExitCode,
-    time::{Duration, Instant},
 };
-
-use console::style;
-use indicatif::{ProgressBar, ProgressStyle};
 
 use crate::{configuration, languages::Language};
 
-use super::{arguments::Arguments, discovery::collect};
-
-#[derive(Default)]
-struct Summary {
-    processed: usize,
-    changed: usize,
-    unchanged: usize,
-    failed: usize,
-}
+use super::{
+    arguments::Arguments,
+    discovery::collect,
+    preview::diff,
+    reporting::{Reporting, Status, stdout},
+};
 
 pub(super) fn batch(
-    arguments: Arguments,
+    arguments: &Arguments,
     configuration: &configuration::Configuration,
     selection: &configuration::Selection,
-) -> Result<ExitCode, String> {
-    let started = Instant::now();
-
+    reporting: &mut Reporting,
+) -> Result<(), String> {
     let directory = env::current_dir()
         .and_then(fs::canonicalize)
         .map_err(|error| error.to_string())?;
 
-    let indicator = ProgressBar::new_spinner().with_style(
-        ProgressStyle::with_template("{spinner:.cyan} {msg}").map_err(|error| error.to_string())?,
-    );
+    reporting.progress("Scanning files...")?;
 
-    progress(&indicator, "Scanning files...".into());
+    let mut files = BTreeSet::new();
+    let mut directories = BTreeSet::new();
 
-    if !indicator.is_hidden() {
-        indicator.enable_steady_tick(Duration::from_millis(120));
+    for path in &arguments.paths {
+        collect(path, &mut files, &mut directories, selection)?;
     }
 
-    let mut summary = Summary::default();
-
-    let result = (|| {
-        let mut files = BTreeSet::new();
-        let mut directories = BTreeSet::new();
-
-        for path in arguments.paths {
-            collect(&path, &mut files, &mut directories, selection)?;
-        }
-
-        process(
-            files,
-            arguments.language,
-            configuration,
-            &indicator,
-            &mut summary,
-            &directory,
-        )
-    })();
-
-    indicator.finish_and_clear();
-
-    if let Err(error) = &result {
-        report(error);
-        eprintln!("{}", style("Aborted").for_stderr().red());
+    if arguments.formatting.source && files.len() != 1 {
+        return Err("--source requires exactly one selected file".into());
     }
 
-    let failures = style(summary.failed).for_stderr();
-
-    let failures = if summary.failed == 0 {
-        failures.dim()
-    } else {
-        failures.red()
-    };
-
-    eprintln!(
-        "{} processed · {} changed · {} unchanged · {} failed · {:?} elapsed",
-        summary.processed,
-        style(summary.changed).for_stderr().green(),
-        style(summary.unchanged).for_stderr().dim(),
-        failures,
-        style(started.elapsed()).for_stderr().cyan(),
-    );
-
-    let pending = summary.processed - summary.changed - summary.unchanged - summary.failed;
-
-    if pending > 0 {
-        eprintln!("{pending} prepared changes not written");
-    }
-
-    Ok(if result.is_ok() && summary.failed == 0 {
-        ExitCode::SUCCESS
-    } else {
-        ExitCode::FAILURE
-    })
-}
-
-pub(crate) fn report(error: &str) {
-    eprintln!("{} {error}", style("error:").for_stderr().red().bold());
-}
-
-fn progress(progress: &ProgressBar, message: String) {
-    if progress.is_hidden() {
-        eprintln!("{message}");
-    }
-
-    progress.set_message(message);
+    process(files, arguments, configuration, reporting, &directory)
 }
 
 fn process(
     files: BTreeSet<PathBuf>,
-    language: Option<Language>,
+    arguments: &Arguments,
     configuration: &configuration::Configuration,
-    indicator: &ProgressBar,
-    summary: &mut Summary,
+    reporting: &mut Reporting,
     directory: &Path,
 ) -> Result<(), String> {
     let total = files.len();
+
+    let writing = !arguments.formatting.check
+        && !arguments.formatting.preview
+        && !arguments.formatting.source;
+
     let mut changes = Vec::new();
 
     for path in files {
@@ -129,66 +61,89 @@ fn process(
             .display()
             .to_string();
 
-        summary.processed += 1;
+        reporting.progress(&format!(
+            "Checking {}/{total}  {name}",
+            reporting.files.len() + 1,
+        ))?;
 
-        progress(
-            indicator,
-            format!("Checking {}/{total}  {name}", summary.processed),
-        );
+        let index = reporting.record(name.clone(), Status::Failed);
+        let source = fs::read_to_string(&path).map_err(|error| format!("{name}\n  {error}"))?;
 
-        let source = fs::read_to_string(&path).map_err(|error| {
-            summary.failed += 1;
-
-            format!("{name}\n  {error}")
-        })?;
-
-        let language = language.or_else(|| Language::infer(&path)).ok_or_else(|| {
-            summary.failed += 1;
-
-            format!("{name}\n  Unknown language; specify --language (-l)")
-        })?;
+        let language = arguments
+            .language
+            .or_else(|| Language::infer(&path))
+            .ok_or_else(|| format!("{name}\n  Unknown language; specify --language (-l)"))?;
 
         let output = match language.format(&source, configuration, Some(&path)) {
             Ok(output) => output,
 
             Err(error) => {
-                summary.failed += 1;
-
-                indicator.suspend(|| {
-                    report(&format!(
-                        "{name} (skipped)\n  {}",
-                        error.replace('\n', "\n  ")
-                    ));
-                });
+                reporting.error(format!(
+                    "{name} (skipped)\n  {}",
+                    error.replace('\n', "\n  "),
+                ));
 
                 continue;
             }
         };
 
         if source == output {
-            summary.unchanged += 1;
-            indicator.suspend(|| eprintln!("{}  {name}", style("Unchanged").for_stderr().dim()));
+            reporting.files[index].status = Status::Unchanged;
+
+            if arguments.formatting.source {
+                changes.push((path, index, output));
+            } else {
+                reporting.success(index)?;
+            }
         } else {
-            changes.push((path, name, output));
+            reporting.files[index].status = if writing {
+                Status::Unwritten
+            } else {
+                Status::WouldChange
+            };
+
+            if arguments.formatting.preview {
+                reporting.files[index].diff = Some(diff(&name, &source, &output));
+            }
+
+            changes.push((path, index, output));
         }
     }
 
     let total = changes.len();
 
-    for (path, name, output) in changes {
-        progress(
-            indicator,
-            format!("Writing {}/{total}  {name}", summary.changed + 1),
-        );
+    for (position, (path, index, output)) in changes.into_iter().enumerate() {
+        if writing {
+            reporting.progress(&format!(
+                "Writing {}/{total}  {}",
+                position + 1,
+                reporting.files[index].path,
+            ))?;
 
-        fs::write(&path, output).map_err(|error| {
-            summary.failed += 1;
+            if let Err(error) = fs::write(&path, output) {
+                reporting.files[index].status = Status::Failed;
 
-            format!("{name}\n  {error}")
-        })?;
+                return Err(format!("{}\n  {error}", reporting.files[index].path));
+            }
 
-        summary.changed += 1;
-        indicator.suspend(|| eprintln!("{}  {name}", style("Formatted").for_stderr().green()));
+            reporting.files[index].status = Status::Formatted;
+        } else {
+            let result = if arguments.formatting.preview && !arguments.output.json {
+                stdout(reporting.files[index].diff.as_deref().unwrap_or_default())
+            } else if arguments.formatting.source {
+                stdout(&output)
+            } else {
+                Ok(())
+            };
+
+            if let Err(error) = result {
+                reporting.files[index].status = Status::Failed;
+
+                return Err(error);
+            }
+        }
+
+        reporting.success(index)?;
     }
 
     Ok(())

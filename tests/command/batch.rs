@@ -19,6 +19,7 @@ return value
 
     let output = workspace
         .command()
+        .arg("--verbose")
         .env("CLICOLOR_FORCE", "1")
         .output()
         .unwrap();
@@ -66,6 +67,10 @@ return value
     assert!(feedback.contains("2 processed · 0 changed · 2 unchanged · 0 failed · "));
     assert!(!feedback.contains('\u{1b}'));
     assert!(!feedback.contains("Formatted"));
+    assert!(!feedback.contains("Unchanged"));
+    assert!(!feedback.contains("Checking"));
+    assert!(!feedback.contains("Scanning"));
+    assert!(!feedback.contains("Writing"));
 }
 
 #[cfg(windows)]
