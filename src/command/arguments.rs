@@ -58,13 +58,10 @@ pub(super) struct Arguments {
     #[arg(
         short = 'S',
         long,
-        conflicts_with_all = ["check", "preview", "source", "quiet", "verbose", "include", "exclude", "stdin_filepath", "json", "server"],
+        conflicts_with_all = ["check", "preview", "source", "quiet", "verbose", "include", "exclude", "stdin_filepath", "json"],
         help = "Print the configuration JSON Schema without formatting files"
     )]
     pub(super) schema: bool,
-
-    #[arg(short = 'L', long = "lsp", conflicts_with_all = ["paths", "language", "schema", "check", "preview", "source", "quiet", "verbose", "include", "exclude", "stdin_filepath", "json"], help = "Run the formatting language server over stdio")]
-    pub(super) server: bool,
 }
 
 #[derive(Clone, Copy, Default, ValueEnum)]

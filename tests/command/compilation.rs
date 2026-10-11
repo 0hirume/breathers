@@ -1,12 +1,9 @@
 use std::fs;
 
-use crate::support::{Workspace, formatting, notification, open, protocol, request};
+use crate::support::Workspace;
 
 #[test]
 fn formats_cplusplus_with_clangd_flags_and_buffer_contents() {
-    use serde_json::json;
-    use tower_lsp_server::ls_types::Uri;
-
     let workspace = Workspace::new();
     let root = workspace.path();
     fs::create_dir_all(root.join("bridge")).unwrap();
@@ -45,27 +42,22 @@ struct Value { Value() = default; };
     let expected = include_str!("../fixtures/cplusplus/command/compilation/output.cpp");
     let path = root.join("bridge/source.cpp");
     fs::write(&path, source).unwrap();
-    let uri = Uri::from_file_path(&path).unwrap();
     let buffer = source.replace("first", "second");
 
-    let responses = protocol(
-        &workspace,
-        &["--lsp"],
-        &[
-            request(1, "initialize", json!({"capabilities": {}})),
-            notification("initialized", json!({})),
-            open(&uri, "cpp", &buffer),
-            formatting(2, &uri),
-            json!({"jsonrpc":"2.0","id":3,"method":"shutdown"}),
-            json!({"jsonrpc":"2.0","method":"exit"}),
-        ],
+    let output = workspace.input(
+        &["--stdin-filepath", "bridge/source.cpp", "-"],
+        buffer.as_bytes(),
+    );
+
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
     );
 
     assert_eq!(
-        responses[&2]["result"][0]["newText"],
-        include_str!("../fixtures/cplusplus/command/compilation/buffer.cpp"),
-        "{}",
-        responses[&2]
+        output.stdout,
+        include_str!("../fixtures/cplusplus/command/compilation/buffer.cpp").as_bytes()
     );
 
     assert_eq!(fs::read_to_string(&path).unwrap(), source);

@@ -1,4 +1,4 @@
-//! Command-line behavior and protocol contracts.
+//! Command-line behavior.
 
 #[path = "command/batch.rs"]
 mod batch;
@@ -14,9 +14,6 @@ mod languages;
 
 #[path = "command/selection.rs"]
 mod selection;
-
-#[path = "command/server.rs"]
-mod server;
 
 #[path = "support/mod.rs"]
 mod support;

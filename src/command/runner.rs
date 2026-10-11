@@ -6,7 +6,7 @@ use std::{
 
 use clap::Parser as _;
 
-use crate::{configuration, languages::Language, server};
+use crate::{configuration, languages::Language};
 
 use super::{
     arguments::Arguments,
@@ -19,7 +19,7 @@ pub(crate) fn run() -> ExitCode {
     let arguments = Arguments::parse();
     let colors = colors(arguments.output.color);
 
-    match execute(arguments) {
+    match execute(&arguments) {
         Ok(status) => status,
 
         Err(error) => {
@@ -30,11 +30,7 @@ pub(crate) fn run() -> ExitCode {
     }
 }
 
-fn execute(arguments: Arguments) -> Result<ExitCode, String> {
-    if arguments.server {
-        return server::run(arguments.config).map(|()| ExitCode::SUCCESS);
-    }
-
+fn execute(arguments: &Arguments) -> Result<ExitCode, String> {
     if arguments.schema {
         let mut schema =
             serde_json::to_string_pretty(&schemars::schema_for!(configuration::Configuration))
@@ -46,9 +42,9 @@ fn execute(arguments: Arguments) -> Result<ExitCode, String> {
         return Ok(ExitCode::SUCCESS);
     }
 
-    let mut reporting = Reporting::new(&arguments);
+    let mut reporting = Reporting::new(arguments);
 
-    if let Err(error) = format(&arguments, &mut reporting) {
+    if let Err(error) = format(arguments, &mut reporting) {
         reporting.abort(error);
     }
 

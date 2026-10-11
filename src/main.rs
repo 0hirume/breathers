@@ -4,7 +4,6 @@ mod command;
 mod compilation;
 mod configuration;
 mod languages;
-mod server;
 mod spacing;
 mod syntax;
 

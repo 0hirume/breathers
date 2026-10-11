@@ -75,7 +75,6 @@ breathers src/main.rs src/main.luau
 | `--language LANGUAGE`         | `-l`  | Override language detection                                                          |
 | `--config PATH`               | `-c`  | Use an explicit project configuration                                                |
 | `--schema`                    | `-S`  | Print the configuration JSON Schema                                                  |
-| `--lsp`                       | `-L`  | Run the formatting language server                                                   |
 | `--version`                   | `-V`  | Print the version                                                                    |
 | `--help`                      | `-h`  | Print help                                                                           |
 
@@ -116,12 +115,6 @@ breathers -l luau -
 breathers -f src/module.luau -
 ```
 
-Start the formatting language server over stdio:
-
-```sh
-breathers --lsp
-```
-
 ## C and C++
 
 C and C++ require LLVM's `libclang` shared library. Install it and set `LIBCLANG_PATH` to its directory if breathers cannot find it.
@@ -132,7 +125,7 @@ For missing headers or declarations, supply your project's include paths and def
 
 ## Configuration
 
-Settings come from the nearest `breathers.toml` above the working directory, layered over global settings. For LSP file documents, discovery starts from the document's directory. Use `-c` / `--config` to select a project configuration explicitly.
+Settings come from the nearest `breathers.toml` above the working directory, layered over global settings. Use `-c` / `--config` to select a project configuration explicitly.
 
 Global settings live in `breathers/config.toml` under `%APPDATA%` on Windows, `~/Library/Application Support` on macOS, or `$XDG_CONFIG_HOME` (falling back to `~/.config`) on Linux.
 
