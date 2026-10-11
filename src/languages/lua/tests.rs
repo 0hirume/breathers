@@ -6,49 +6,9 @@ fn breathe(source: &str) -> Result<String, String> {
 
 #[test]
 fn spaces_blocks_calls_tables_and_returns() {
-    let source = r"local first = 1
-local second = 2 -- trailing
--- attached
-if first < second then
-    work()
-elseif first == second then
-    same()
-else
-    other()
-end
-local values = {
-    first,
-    second,
-}
-save(
-    values
-)
-return values
-";
+    let source = include_str!("../../../tests/fixtures/lua/spacing/input.lua");
 
-    let expected = r"local first = 1
-local second = 2 -- trailing
-
--- attached
-if first < second then
-    work()
-elseif first == second then
-    same()
-else
-    other()
-end
-
-local values = {
-    first,
-    second,
-}
-
-save(
-    values
-)
-
-return values
-";
+    let expected = include_str!("../../../tests/fixtures/lua/spacing/output.lua");
 
     assert_eq!(breathe(source).unwrap(), expected);
     assert_eq!(breathe(expected).unwrap(), expected);
@@ -64,43 +24,15 @@ return values
 
 #[test]
 fn supports_lua_syntax_and_nested_functions() {
-    let source = r"local value <const> = 8 // 2
-::again::
-value = value & 3
-if value > 0 then
-    goto again
-end
-return value
-";
+    let source = include_str!("../../../tests/fixtures/lua/syntax/input.lua");
 
-    let expected = r"local value <const> = 8 // 2
-::again::
-value = value & 3
-
-if value > 0 then
-    goto again
-end
-
-return value
-";
+    let expected = include_str!("../../../tests/fixtures/lua/syntax/output.lua");
 
     assert_eq!(breathe(source).unwrap(), expected);
 
-    let source = r"local function example()
-    work()
-    return 1
-end
-local value = example()
-";
+    let source = include_str!("../../../tests/fixtures/lua/function/input.lua");
 
-    let expected = r"local function example()
-    work()
-
-    return 1
-end
-
-local value = example()
-";
+    let expected = include_str!("../../../tests/fixtures/lua/function/output.lua");
 
     assert_eq!(breathe(source).unwrap(), expected);
 }

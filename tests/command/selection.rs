@@ -92,21 +92,8 @@ fn formats_selected_files() {
     let root = workspace.path();
     fs::create_dir(root.join("src")).unwrap();
     fs::create_dir(root.join("target")).unwrap();
-    let source = r"void work(void);
-
-int example(void) {
-    work();
-    return 1;
-}
-";
-    let expected = r"void work(void);
-
-int example(void) {
-    work();
-
-    return 1;
-}
-";
+    let source = include_str!("../fixtures/c/command/standard/input.c");
+    let expected = include_str!("../fixtures/c/command/standard/output.c");
 
     let files = [
         "main.c",

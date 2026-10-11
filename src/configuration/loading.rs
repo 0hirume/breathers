@@ -107,15 +107,7 @@ mod tests {
 
         fs::write(
             &global,
-            r#"include = ["**/*.rs"]
-exclude = ["vendor/**"]
-[rust]
-returns = false
-tail_expressions = true
-related = true
-[python]
-blocks = false
-"#,
+            include_str!("../../tests/fixtures/configuration/loading/global.toml"),
         )
         .unwrap();
 

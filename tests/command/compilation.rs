@@ -41,21 +41,8 @@ struct Value { Value() = default; };
     )
     .unwrap();
 
-    let source = r"#include <value.hpp>
-int example(Value parent = {}) {
-    int first = 1;
-    CHANGE(first);
-    return first;
-}
-";
-    let expected = r"#include <value.hpp>
-int example(Value parent = {}) {
-    int first = 1;
-    CHANGE(first);
-
-    return first;
-}
-";
+    let source = include_str!("../fixtures/cplusplus/command/compilation/input.cpp");
+    let expected = include_str!("../fixtures/cplusplus/command/compilation/output.cpp");
     let path = root.join("bridge/source.cpp");
     fs::write(&path, source).unwrap();
     let uri = Uri::from_file_path(&path).unwrap();
@@ -76,14 +63,7 @@ int example(Value parent = {}) {
 
     assert_eq!(
         responses[&2]["result"][0]["newText"],
-        r"#include <value.hpp>
-int example(Value parent = {}) {
-    int second = 1;
-    CHANGE(second);
-
-    return second;
-}
-",
+        include_str!("../fixtures/cplusplus/command/compilation/buffer.cpp"),
         "{}",
         responses[&2]
     );
@@ -138,19 +118,8 @@ fn formats_c_with_compilation_database_flags() {
 
     let path = root.join("nested/source.c");
 
-    let source = r"#include <value.h>
-int example(void) {
-    int value = VALUE;
-    return value;
-}
-";
-    let expected = r"#include <value.h>
-int example(void) {
-    int value = VALUE;
-
-    return value;
-}
-";
+    let source = include_str!("../fixtures/c/command/database/input.c");
+    let expected = include_str!("../fixtures/c/command/database/output.c");
 
     let mut entries = vec![
         json!({
@@ -218,41 +187,11 @@ fn formats_c_preprocessing_and_rejects_active_errors() {
     )
     .unwrap();
 
-    let header = r#"#ifndef VALUE_H
-#define VALUE_H
-#ifdef __cplusplus
-extern "C" {
-#endif
-#ifndef ENABLED
-#error missing compiler flag
-#endif
-#define FIELD(type) type field;
-#define CHANGE(value) do { if (value) { ++value; } } while (0)
-struct Value { FIELD(int) };
-#ifdef __cplusplus
-}
-#endif
-#endif
-"#;
+    let header = include_str!("../fixtures/c/command/preprocessing/header.h");
     fs::write(root.join("include/value.h"), header).unwrap();
 
-    let source = r"#include <value.h>
-int example(void) {
-    struct Value value = { .field = ENABLED };
-    int class = value.field;
-    CHANGE(class);
-    return class;
-}
-";
-    let expected = r"#include <value.h>
-int example(void) {
-    struct Value value = { .field = ENABLED };
-    int class = value.field;
-    CHANGE(class);
-
-    return class;
-}
-";
+    let source = include_str!("../fixtures/c/command/preprocessing/input.c");
+    let expected = include_str!("../fixtures/c/command/preprocessing/output.c");
     let path = root.join("source.c");
     fs::write(&path, source).unwrap();
 

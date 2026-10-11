@@ -2,51 +2,9 @@ use crate::configuration::{Configuration, Rules};
 
 #[test]
 fn spaces_functions_named_blocks_and_returns() {
-    let source = r"#Requires -Version 7.0
-using namespace System.IO
-function Get-Value {
-    param([string]$Path)
-    begin { Write-Output ready }
-    process {
-        $value = Get-Item $Path
-        # attached
-        if ($value) {
-            Write-Output $value
-        }
-        Get-Process
-        | Sort-Object CPU
-        RETURN $value
-    }
-    clean { Remove-Variable value }
-}
-Write-Output done
-";
+    let source = include_str!("../../../tests/fixtures/powershell/spacing/input.ps1");
 
-    let expected = r"#Requires -Version 7.0
-using namespace System.IO
-function Get-Value {
-    param([string]$Path)
-    begin { Write-Output ready }
-
-    process {
-        $value = Get-Item $Path
-
-        # attached
-        if ($value) {
-            Write-Output $value
-        }
-
-        Get-Process
-        | Sort-Object CPU
-
-        RETURN $value
-    }
-
-    clean { Remove-Variable value }
-}
-
-Write-Output done
-";
+    let expected = include_str!("../../../tests/fixtures/powershell/spacing/output.ps1");
 
     for (source, expected) in [
         (source.to_owned(), expected.to_owned()),
@@ -113,12 +71,7 @@ related = true
     )
     .unwrap();
 
-    let source = r#"$Value = @(
-    1
-)
-Write-Output "${value}"
-Write-Output done
-"#;
+    let source = include_str!("../../../tests/fixtures/powershell/interpolation/input.ps1");
 
     assert_eq!(
         super::breathe(source, &configuration.powershell).unwrap(),
@@ -127,12 +80,6 @@ Write-Output done
 
     assert_eq!(
         super::breathe(source, &Rules::default()).unwrap(),
-        r#"$Value = @(
-    1
-)
-
-Write-Output "${value}"
-Write-Output done
-"#
+        include_str!("../../../tests/fixtures/powershell/interpolation/output.ps1")
     );
 }

@@ -209,17 +209,7 @@ pub(crate) fn arguments(path: &Path) -> Result<Vec<String>, String> {
 mod tests {
     #[test]
     fn reads_conditional_yaml_documents() {
-        let source = r"If:
-  PathMatch: ['bridge/.*', 'other/.*']
-  PathExclude: 'bridge/generated/.*'
-CompileFlags:
-  Add:
-    - -std=c++17
-    - '-I../headers with spaces'
----
-CompileFlags:
-  Add: -DSECOND
-";
+        let source = include_str!("../tests/fixtures/compilation/conditional/input.yaml");
         let mut arguments = Vec::new();
         super::extend(source, "bridge/source.cpp", &mut arguments).unwrap();
 

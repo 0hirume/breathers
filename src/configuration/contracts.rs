@@ -755,13 +755,7 @@ fn controls_fields_arms_and_variants_in_new_languages() {
             Language::Python,
             "python",
             "fields",
-            r"values = {
-    'first': 1,
-    'second': [
-        2,
-    ],
-}
-",
+            fixture!("disabling/python/dictionary", "py", "before"),
         ),
         (
             Language::Python,
@@ -779,15 +773,7 @@ fn controls_fields_arms_and_variants_in_new_languages() {
             Language::Javascript,
             "javascript",
             "arms",
-            r"switch (value) {
-    case 1:
-        work();
-        break;
-    default:
-        finish();
-        break;
-}
-",
+            fixture!("disabling/javascript/switch", "js", "before"),
         ),
         (
             Language::Typescript,
@@ -799,13 +785,7 @@ fn controls_fields_arms_and_variants_in_new_languages() {
             Language::Typescript,
             "typescript",
             "variants",
-            r"enum Example {
-    First,
-    Second = calculate(
-        1,
-    ),
-}
-",
+            fixture!("disabling/typescript/enum", "ts", "before"),
         ),
     ] {
         assert_ne!(

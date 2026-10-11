@@ -165,21 +165,8 @@ return value
 fn formats_valid_files_and_reports_syntax_errors() {
     let workspace = Workspace::new();
     let root = workspace.path();
-    let source = r"void work(void);
-
-int example(void) {
-    work();
-    return 1;
-}
-";
-    let expected = r"void work(void);
-
-int example(void) {
-    work();
-
-    return 1;
-}
-";
+    let source = include_str!("../fixtures/c/command/standard/input.c");
+    let expected = include_str!("../fixtures/c/command/standard/output.c");
 
     for (name, invalid, formatted) in [
         ("unknown", source, source),
@@ -221,12 +208,7 @@ int example(void) {
         "fn broken( {"
     );
 
-    let source = r"template<typename Value>
-Value example(Value value) {
-    work();
-    return value;
-}
-";
+    let source = include_str!("../fixtures/cplusplus/command/template/input.cpp");
     fs::write(root.join("cplusplus.h"), source).unwrap();
 
     let output = workspace.command().arg("cplusplus.h").output().unwrap();
@@ -247,12 +229,6 @@ Value example(Value value) {
 
     assert_eq!(
         fs::read_to_string(root.join("cplusplus.h")).unwrap(),
-        r"template<typename Value>
-Value example(Value value) {
-    work();
-
-    return value;
-}
-"
+        include_str!("../fixtures/cplusplus/command/template/output.cpp")
     );
 }

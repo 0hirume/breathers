@@ -41,21 +41,8 @@ return value
         ),
         (
             "c",
-            r"void work(void);
-
-int example(void) {
-    work();
-    return 1;
-}
-",
-            r"void work(void);
-
-int example(void) {
-    work();
-
-    return 1;
-}
-",
+            include_str!("../fixtures/c/command/standard/input.c"),
+            include_str!("../fixtures/c/command/standard/output.c"),
         ),
         (
             "c++",

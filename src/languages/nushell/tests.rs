@@ -2,34 +2,9 @@ use crate::configuration::Rules;
 
 #[test]
 fn spaces_blocks_pipelines_and_returns() {
-    let source = r"def example [] {
-    let ready = true
-    # attached
-    if $ready {
-        print ready
-    }
-    ls
-    | where size > 0
-    | get name
-    return done
-}
-";
+    let source = include_str!("../../../tests/fixtures/nushell/spacing/input.nu");
 
-    let expected = r"def example [] {
-    let ready = true
-
-    # attached
-    if $ready {
-        print ready
-    }
-
-    ls
-    | where size > 0
-    | get name
-
-    return done
-}
-";
+    let expected = include_str!("../../../tests/fixtures/nushell/spacing/output.nu");
 
     for (source, expected) in [
         (source.to_owned(), expected.to_owned()),
@@ -163,60 +138,16 @@ use example ready
 fn spaces_records_match_arms_and_closures() {
     for (source, expected) in [
         (
-            r"let value = {
-    first: 1
-    second: [
-        2
-    ]
-    third: 3
-}
-print $value
-",
-            r"let value = {
-    first: 1
-
-    second: [
-        2
-    ]
-
-    third: 3
-}
-
-print $value
-",
+            include_str!("../../../tests/fixtures/nushell/record/input.nu"),
+            include_str!("../../../tests/fixtures/nushell/record/output.nu"),
         ),
         (
-            r"match $value {
-    1 => {
-        print first
-    }
-    _ => { print other }
-}
-",
-            r"match $value {
-    1 => {
-        print first
-    }
-
-    _ => { print other }
-}
-",
+            include_str!("../../../tests/fixtures/nushell/matching/input.nu"),
+            include_str!("../../../tests/fixtures/nushell/matching/output.nu"),
         ),
         (
-            r"let transform = { |value|
-    print $value
-    return $value
-}
-print done
-",
-            r"let transform = { |value|
-    print $value
-
-    return $value
-}
-
-print done
-",
+            include_str!("../../../tests/fixtures/nushell/closure/input.nu"),
+            include_str!("../../../tests/fixtures/nushell/closure/output.nu"),
         ),
     ] {
         let formatted = super::breathe(source, &Rules::default()).unwrap();

@@ -2,34 +2,9 @@ use crate::configuration::Rules;
 
 #[test]
 fn spaces_python_without_touching_indentation_or_strings() {
-    let source = r"@decorate
-def example():
-    first = 1
-    second = 2  # trailing
-    # attached
-    if first < second:
-        work()
-    else:
-        other()
-    save()
-    return first
-";
+    let source = include_str!("../../../tests/fixtures/python/spacing/input.py");
 
-    let expected = r"@decorate
-def example():
-    first = 1
-    second = 2  # trailing
-
-    # attached
-    if first < second:
-        work()
-    else:
-        other()
-
-    save()
-
-    return first
-";
+    let expected = include_str!("../../../tests/fixtures/python/spacing/output.py");
 
     let rules = Rules::default();
     assert_eq!(super::breathe(source, &rules).unwrap(), expected);
@@ -91,23 +66,9 @@ fn preserves_function_docstring_boundaries() {
         assert_eq!(super::breathe(&source, &rules).unwrap(), source);
     }
 
-    let source = r#"class Example:
-    """Describe the class."""
-    def method(self):
-        """Describe the result."""
-        value = 1
-        return value
-"#;
+    let source = include_str!("../../../tests/fixtures/python/documentation/input.py");
 
-    let expected = r#"class Example:
-    """Describe the class."""
-
-    def method(self):
-        """Describe the result."""
-        value = 1
-
-        return value
-"#;
+    let expected = include_str!("../../../tests/fixtures/python/documentation/output.py");
 
     assert_eq!(super::breathe(source, &rules).unwrap(), expected);
 }
@@ -123,34 +84,13 @@ from other import (
 )
 import another
 ",
-        r"from example import (
-    first,
-)
-from other import (
-    second,
-)
-from third import item
-",
+        include_str!("../../../tests/fixtures/python/imports/input.py"),
         r"from __future__ import annotations
 from __future__ import (
     generator_stop,
 )
 ",
-        r"from __future__ import annotations
-
-import example
-
-from .other import (
-    first,
-)
-from .third import second
-
-if TYPE_CHECKING:
-    from .other import (
-        Example,
-    )
-    from .third import Other
-",
+        include_str!("../../../tests/fixtures/python/grouping/input.py"),
     ] {
         assert_eq!(super::breathe(source, &rules).unwrap(), source);
     }

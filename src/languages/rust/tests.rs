@@ -2,23 +2,10 @@ use crate::configuration::{Configuration, Rules};
 
 #[test]
 fn spaces_multiline_items() {
-    let source = r"pub(crate) use options::Options;
-pub(super) struct Layout<'a> {
-    pub(crate) source: &'a str,
-    pub(crate) options: &'a Options,
-}
-use other::Other;
-";
-    let expected = r"pub(crate) use options::Options;
-
-pub(super) struct Layout<'a> {
-    pub(crate) source: &'a str,
-    pub(crate) options: &'a Options,
-}
-
-use other::Other;
-";
+    let source = include_str!("../../../tests/fixtures/rust/items/input.rs");
+    let expected = include_str!("../../../tests/fixtures/rust/items/output.rs");
     let rules = Rules::default();
+
     let configuration: Configuration = toml::from_str(
         r"[rust]
 multiline = false
@@ -59,31 +46,16 @@ multiline = false
 
 #[test]
 fn spaces_function_items_in_files_modules_and_implementations() {
-    let functions = r"pub(super) fn first() -> u8 {
-    1
-}
-/// Second function.
-#[inline]
-pub(super) fn second() -> u8 {
-    2
-}
-";
-    let expected = r"pub(super) fn first() -> u8 {
-    1
-}
+    let functions = include_str!("../../../tests/fixtures/rust/functions/input.rs");
+    let expected = include_str!("../../../tests/fixtures/rust/functions/output.rs");
 
-/// Second function.
-#[inline]
-pub(super) fn second() -> u8 {
-    2
-}
-";
     let configuration: Configuration = toml::from_str(
         r"[rust]
 functions = false
 ",
     )
     .unwrap();
+
     let rules = Rules::default();
 
     for (opening, closing) in [
@@ -125,37 +97,8 @@ functions = false
 
 #[test]
 fn spaces_statements_without_changing_tokens() {
-    let source = r"fn example() {
-    let first = 1;
-    let second = 2; // trailing
-    // attached
-    if first < second {
-        work();
-    }
-    let values = [
-        first,
-        second,
-    ];
-    finish();
-}
-";
-    let expected = r"fn example() {
-    let first = 1;
-    let second = 2; // trailing
-
-    // attached
-    if first < second {
-        work();
-    }
-
-    let values = [
-        first,
-        second,
-    ];
-
-    finish();
-}
-";
+    let source = include_str!("../../../tests/fixtures/rust/statements/input.rs");
+    let expected = include_str!("../../../tests/fixtures/rust/statements/output.rs");
     assert_eq!(breathe(source).unwrap(), expected);
     assert_eq!(breathe(expected).unwrap(), expected);
 
@@ -170,21 +113,10 @@ fn preserves_literals_macros_and_compact_code() {
     for source in [
         r"fn example() { one(); if ready() { two(); } three(); }
 ",
-        r##"fn example() {
-    let text = r#"first
-second"#;
-    finish();
-}
-"##,
+        include_str!("../../../tests/fixtures/rust/literal/input.rs"),
         r"macro_rules! example { () => { first(); if ready() { second(); } third(); }; }
 ",
-        r"fn example() {
-    first();
-
-    // attached
-    if ready() {}
-}
-",
+        include_str!("../../../tests/fixtures/rust/attachment/input.rs"),
     ] {
         assert_eq!(breathe(source).unwrap(), source);
     }
@@ -194,30 +126,8 @@ second"#;
 
 #[test]
 fn spaces_multiline_struct_fields() {
-    let source = r"struct Processor {
-    name: String,
-    enabled: bool,
-    callback: Box<
-        dyn Fn(&Request) -> Result<Response, Error>
-            + Send
-            + Sync,
-    >,
-    retries: usize,
-}
-";
-    let expected = r"struct Processor {
-    name: String,
-    enabled: bool,
-
-    callback: Box<
-        dyn Fn(&Request) -> Result<Response, Error>
-            + Send
-            + Sync,
-    >,
-
-    retries: usize,
-}
-";
+    let source = include_str!("../../../tests/fixtures/rust/structure/input.rs");
+    let expected = include_str!("../../../tests/fixtures/rust/structure/output.rs");
     assert_eq!(breathe(source).unwrap(), expected);
     assert_eq!(breathe(expected).unwrap(), expected);
 
@@ -226,24 +136,8 @@ fn spaces_multiline_struct_fields() {
         expected.replace('\n', "\r\n")
     );
 
-    let source = r"struct Tuple(
-    u32,
-    Box<
-        String,
-    >,
-    bool,
-);
-";
-    let expected = r"struct Tuple(
-    u32,
-
-    Box<
-        String,
-    >,
-
-    bool,
-);
-";
+    let source = include_str!("../../../tests/fixtures/rust/tuple/input.rs");
+    let expected = include_str!("../../../tests/fixtures/rust/tuple/output.rs");
     assert_eq!(breathe(source).unwrap(), expected);
 
     for source in [
@@ -252,12 +146,7 @@ fn spaces_multiline_struct_fields() {
     second: bool,
 }
 ",
-        r"struct Only {
-    value: Box<
-        String,
-    >,
-}
-",
+        include_str!("../../../tests/fixtures/rust/field/input.rs"),
     ] {
         assert_eq!(breathe(source).unwrap(), source);
     }
@@ -273,22 +162,15 @@ fn spaces_returns_and_final_expressions() {
         "return result",
     ] {
         let source = format!(
-            r"fn example() {{
-    let result = calculate();
-    save();
-    {expression}
-}}
-"
+            include_str!("../../../tests/fixtures/rust/returns/input.rs"),
+            expression = expression
         );
-        let expected = format!(
-            r"fn example() {{
-    let result = calculate();
-    save();
 
-    {expression}
-}}
-"
+        let expected = format!(
+            include_str!("../../../tests/fixtures/rust/returns/output.rs"),
+            expression = expression
         );
+
         assert_eq!(breathe(&source).unwrap(), expected);
         assert_eq!(breathe(&expected).unwrap(), expected);
     }
@@ -304,12 +186,7 @@ fn spaces_returns_and_final_expressions() {
 ",
         r"fn example() { first(); result }
 ",
-        r"fn example() {
-    first();
-    let callback = || return result;
-    finish();
-}
-",
+        include_str!("../../../tests/fixtures/rust/closure/input.rs"),
     ] {
         assert_eq!(breathe(source).unwrap(), source);
     }
@@ -317,37 +194,8 @@ fn spaces_returns_and_final_expressions() {
 
 #[test]
 fn spaces_multiline_enum_variants() {
-    let source = r"enum Example {
-    First,
-    Second(u32), // trailing
-    // attached
-    Record {
-        value: u32,
-    },
-    Tuple(
-        u32,
-        String,
-    ),
-    Last,
-}
-";
-    let expected = r"enum Example {
-    First,
-    Second(u32), // trailing
-
-    // attached
-    Record {
-        value: u32,
-    },
-
-    Tuple(
-        u32,
-        String,
-    ),
-
-    Last,
-}
-";
+    let source = include_str!("../../../tests/fixtures/rust/enumeration/input.rs");
+    let expected = include_str!("../../../tests/fixtures/rust/enumeration/output.rs");
     assert_eq!(breathe(source).unwrap(), expected);
     assert_eq!(breathe(expected).unwrap(), expected);
 
@@ -359,18 +207,8 @@ fn spaces_multiline_enum_variants() {
     for source in [
         r"enum Example { First, Second(u32), Record { value: u32 } }
 ",
-        r"enum Example {
-    First,
-    Second(u32),
-    Record { value: u32 },
-}
-",
-        r"enum Example {
-    Record {
-        value: u32,
-    },
-}
-",
+        include_str!("../../../tests/fixtures/rust/compact/input.rs"),
+        include_str!("../../../tests/fixtures/rust/variant/input.rs"),
     ] {
         assert_eq!(breathe(source).unwrap(), source);
     }
@@ -378,43 +216,8 @@ fn spaces_multiline_enum_variants() {
 
 #[test]
 fn spaces_multiline_match_arms() {
-    let source = r"fn example() {
-    match kind {
-        Kind::First => 1,
-        Kind::Second => 2, // trailing
-        // attached
-        Kind::Index => Value::Index {
-            receiver: children.next()?,
-            key: children.next()?,
-        },
-        Kind::Instantiate => Value::Instantiate {
-            expression: children.next()?,
-            arguments: children.next()?,
-        },
-        Kind::Last => 3,
-    }
-}
-";
-    let expected = r"fn example() {
-    match kind {
-        Kind::First => 1,
-        Kind::Second => 2, // trailing
-
-        // attached
-        Kind::Index => Value::Index {
-            receiver: children.next()?,
-            key: children.next()?,
-        },
-
-        Kind::Instantiate => Value::Instantiate {
-            expression: children.next()?,
-            arguments: children.next()?,
-        },
-
-        Kind::Last => 3,
-    }
-}
-";
+    let source = include_str!("../../../tests/fixtures/rust/matching/input.rs");
+    let expected = include_str!("../../../tests/fixtures/rust/matching/output.rs");
     assert_eq!(breathe(source).unwrap(), expected);
     assert_eq!(breathe(expected).unwrap(), expected);
 
@@ -424,22 +227,8 @@ fn spaces_multiline_match_arms() {
     );
 
     for source in [
-        r"fn example() {
-    match kind {
-        First => if ready() { 1 } else { 2 },
-        Second => { 3 },
-        _ => 4,
-    }
-}
-",
-        r##"fn example() {
-    match kind {
-        First => r#"first
-second"#,
-        _ => "last",
-    }
-}
-"##,
+        include_str!("../../../tests/fixtures/rust/arms/input.rs"),
+        include_str!("../../../tests/fixtures/rust/text/input.rs"),
     ] {
         assert_eq!(breathe(source).unwrap(), source);
     }
@@ -456,23 +245,15 @@ fn spaces_control_flow_and_tail_expressions() {
         "let value = if ready() { 1 } else { 2 };",
     ] {
         let source = format!(
-            r"fn example() {{
-    first();
-    {statement}
-    result
-}}
-"
+            include_str!("../../../tests/fixtures/rust/flow/input.rs"),
+            statement = statement
         );
+
         let expected = format!(
-            r"fn example() {{
-    first();
-
-    {statement}
-
-    result
-}}
-"
+            include_str!("../../../tests/fixtures/rust/flow/output.rs"),
+            statement = statement
         );
+
         assert_eq!(breathe(&source).unwrap(), expected);
     }
 }

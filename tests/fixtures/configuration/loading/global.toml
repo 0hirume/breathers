@@ -1,0 +1,8 @@
+include = ["**/*.rs"]
+exclude = ["vendor/**"]
+[rust]
+returns = false
+tail_expressions = true
+related = true
+[python]
+blocks = false

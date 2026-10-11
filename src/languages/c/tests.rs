@@ -12,10 +12,12 @@ fn preserves_inactive_code_with_parser_fallback() {
         super::breathe(source, None, &rules, Dialect::CPlusPlus).unwrap(),
         expected
     );
+
     assert_eq!(
         super::breathe(expected, None, &rules, Dialect::CPlusPlus).unwrap(),
         expected
     );
+
     assert_eq!(
         super::breathe(
             &source.replace('\n', "\r\n"),
@@ -30,30 +32,9 @@ fn preserves_inactive_code_with_parser_fallback() {
 
 #[test]
 fn formats_braced_defaults_and_preserves_source() {
-    let source = r"struct Value { Value() = default; };
-int example(Value parent = {}) {
-    int first = 1; // trailing
-    // attached
-    if (first) {
-        ++first;
-    }
-    return first;
-}
-";
+    let source = include_str!("../../../tests/fixtures/c/defaults/input.cpp");
 
-    let expected = r"struct Value { Value() = default; };
-
-int example(Value parent = {}) {
-    int first = 1; // trailing
-
-    // attached
-    if (first) {
-        ++first;
-    }
-
-    return first;
-}
-";
+    let expected = include_str!("../../../tests/fixtures/c/defaults/output.cpp");
 
     let rules = Rules::default();
 
@@ -83,25 +64,8 @@ int example(Value parent = {}) {
 
 #[test]
 fn keeps_first_control_flow_statement_adjacent() {
-    let source = r"int resolve(
-    const int *from, int *expression, const int *limits
-) {
-    if (!from) {
-        return 0;
-    }
-    return expression ? *from : 0;
-}
-";
-    let expected = r"int resolve(
-    const int *from, int *expression, const int *limits
-) {
-    if (!from) {
-        return 0;
-    }
-
-    return expression ? *from : 0;
-}
-";
+    let source = include_str!("../../../tests/fixtures/c/resolution/input.c");
+    let expected = include_str!("../../../tests/fixtures/c/resolution/output.c");
     let rules = Rules::default();
 
     for language in [Dialect::C, Dialect::CPlusPlus] {
@@ -124,28 +88,9 @@ fn keeps_first_control_flow_statement_adjacent() {
 
 #[test]
 fn keeps_first_control_flow_statement_adjacent_in_method() {
-    let source = r"struct Sources {
-    int resolve(
-        int *from, int *expression, int &) {
-        if (!from) {
-            return 0;
-        }
-        return expression ? *from : 0;
-    }
-};
-";
+    let source = include_str!("../../../tests/fixtures/c/method/input.cpp");
 
-    let expected = r"struct Sources {
-    int resolve(
-        int *from, int *expression, int &) {
-        if (!from) {
-            return 0;
-        }
-
-        return expression ? *from : 0;
-    }
-};
-";
+    let expected = include_str!("../../../tests/fixtures/c/method/output.cpp");
 
     let rules = Rules::default();
 
@@ -162,14 +107,7 @@ fn keeps_first_control_flow_statement_adjacent_in_method() {
 
 #[test]
 fn leaves_first_constructor_loop_adjacent() {
-    let source = r"struct Sources {
-    Sources(int count) {
-        for (int index = 0; index < count; ++index) {
-            (void)index;
-        }
-    }
-};
-";
+    let source = include_str!("../../../tests/fixtures/c/constructor/input.cpp");
 
     let rules = Rules::default();
 
@@ -192,43 +130,15 @@ fn leaves_first_statement_adjacent_after_wrapped_return_type() {
 
     for (source, language) in [
         (
-            r"int
-example(const int *value) {
-    if (!value) {
-        return 0;
-    }
-
-    return *value;
-}
-",
+            include_str!("../../../tests/fixtures/c/returning/input.c"),
             Dialect::C,
         ),
         (
-            r"int
-example(const int *value) {
-    if (!value) {
-        return 0;
-    }
-
-    return *value;
-}
-",
+            include_str!("../../../tests/fixtures/c/returning/input.c"),
             Dialect::CPlusPlus,
         ),
         (
-            r"struct Example {
-    int resolve(const int *value);
-};
-
-int
-Example::resolve(const int *value) {
-    if (!value) {
-        return 0;
-    }
-
-    return *value;
-}
-",
+            include_str!("../../../tests/fixtures/c/member/input.cpp"),
             Dialect::CPlusPlus,
         ),
     ] {
@@ -248,12 +158,7 @@ Example::resolve(const int *value) {
 
 #[test]
 fn leaves_first_statement_adjacent_for_single_line_header() {
-    let source = r"void report_error(const char *message) {
-    if (!message) {
-        return;
-    }
-}
-";
+    let source = include_str!("../../../tests/fixtures/c/header/input.cpp");
 
     let rules = Rules::default();
 
@@ -280,6 +185,7 @@ fn respects_related_reads_and_shadowed_bindings() {
     return value;
 }
 ";
+
     assert_eq!(
         super::breathe(source, None, rules, Dialect::CPlusPlus).unwrap(),
         source
@@ -287,22 +193,11 @@ fn respects_related_reads_and_shadowed_bindings() {
 
     for (source, next) in [
         (
-            r"void example() {
-    int value = 1;
-    value = (
-        2
-    );
-}
-",
+            include_str!("../../../tests/fixtures/c/assignment/input.cpp"),
             "    value =",
         ),
         (
-            r"void example() {
-    int index = 1;
-    for (int index = 0; index < 10; ++index) {
-    }
-}
-",
+            include_str!("../../../tests/fixtures/c/shadowing/input.cpp"),
             "    for",
         ),
     ] {
@@ -318,50 +213,18 @@ fn respects_related_reads_and_shadowed_bindings() {
 
 #[test]
 fn preserves_macro_arguments() {
-    let source = r"#define IDENTITY(value) value
-int example() {
-    auto callback = IDENTITY([] {
-        int first = 1;
-        return first;
-    });
-    return callback();
-}
-";
+    let source = include_str!("../../../tests/fixtures/c/arguments/input.cpp");
 
     assert_eq!(
         super::breathe(source, None, &Rules::default(), Dialect::CPlusPlus).unwrap(),
-        r"#define IDENTITY(value) value
-int example() {
-    auto callback = IDENTITY([] {
-        int first = 1;
-        return first;
-    });
-
-    return callback();
-}
-"
+        include_str!("../../../tests/fixtures/c/arguments/output.cpp")
     );
 }
 
 #[test]
 fn preserves_macros_and_literal_contents() {
-    let source = r#"#define BODY do { int first = 1; if (first) { ++first; } } while (0)
-int example() {
-    BODY;
-    const char *text = R"(one
-two)";
-    return text[0];
-}
-"#;
-    let expected = r#"#define BODY do { int first = 1; if (first) { ++first; } } while (0)
-int example() {
-    BODY;
-    const char *text = R"(one
-two)";
-
-    return text[0];
-}
-"#;
+    let source = include_str!("../../../tests/fixtures/c/literal/input.cpp");
+    let expected = include_str!("../../../tests/fixtures/c/literal/output.cpp");
 
     assert_eq!(
         super::breathe(source, None, &Rules::default(), Dialect::CPlusPlus).unwrap(),

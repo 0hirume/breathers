@@ -8,32 +8,9 @@ fn breathe(source: &str) -> Result<String, String> {
 
 #[test]
 fn spaces_cplusplus_statements() {
-    let source = r"int example(void) {
-    int first = 1;
-    int second = 2; // trailing
-    // attached
-    if (first < second) {
-        work();
-    }
-    save();
-    return first;
-}
-";
+    let source = include_str!("../../../tests/fixtures/cplusplus/statements/input.cpp");
 
-    let expected = r"int example(void) {
-    int first = 1;
-    int second = 2; // trailing
-
-    // attached
-    if (first < second) {
-        work();
-    }
-
-    save();
-
-    return first;
-}
-";
+    let expected = include_str!("../../../tests/fixtures/cplusplus/statements/output.cpp");
 
     assert_eq!(breathe(source).unwrap(), expected);
     assert_eq!(breathe(expected).unwrap(), expected);
@@ -66,37 +43,12 @@ fn preserves_directives_literals_and_macro_arguments() {
 ",
         ),
         (
-            r"void example() {
-    MACRO([] {
-        first();
-        return second();
-    });
-    finish();
-}
-",
-            r"void example() {
-    MACRO([] {
-        first();
-        return second();
-    });
-
-    finish();
-}
-",
+            include_str!("../../../tests/fixtures/cplusplus/arguments/input.cpp"),
+            include_str!("../../../tests/fixtures/cplusplus/arguments/output.cpp"),
         ),
         (
-            r#"void example() {
-    auto text = R"(first
-second)";
-    finish();
-}
-"#,
-            r#"void example() {
-    auto text = R"(first
-second)";
-    finish();
-}
-"#,
+            include_str!("../../../tests/fixtures/cplusplus/literal/input.cpp"),
+            include_str!("../../../tests/fixtures/cplusplus/literal/input.cpp"),
         ),
         (
             r"void example() { first(); if (ready()) { second(); } third(); }
@@ -111,104 +63,32 @@ second)";
 
 #[test]
 fn spaces_fields_cases_and_guarded_code() {
-    let source = r"#ifndef EXAMPLE_H
-#define EXAMPLE_H
-int example(void) {
-    work();
-    return 1;
-}
-#endif
-";
+    let source = include_str!("../../../tests/fixtures/cplusplus/guard/input.cpp");
 
     assert_eq!(
         breathe(source).unwrap(),
-        r"#ifndef EXAMPLE_H
-#define EXAMPLE_H
-int example(void) {
-    work();
-
-    return 1;
-}
-#endif
-"
+        include_str!("../../../tests/fixtures/cplusplus/guard/output.cpp")
     );
 
-    let source = r"struct Example {
-    int first;
-    int (*callback)(
-        int,
-        int
-    );
-    int last;
-};
-";
+    let source = include_str!("../../../tests/fixtures/cplusplus/fields/input.cpp");
 
-    let expected = r"struct Example {
-    int first;
-
-    int (*callback)(
-        int,
-        int
-    );
-
-    int last;
-};
-";
+    let expected = include_str!("../../../tests/fixtures/cplusplus/fields/output.cpp");
 
     assert_eq!(breathe(source).unwrap(), expected);
 
-    let source = r"void example(int value) {
-    switch (value) {
-        case 1:
-            work();
-            break;
-        default:
-            finish();
-            break;
-    }
-}
-";
-    let expected = r"void example(int value) {
-    switch (value) {
-        case 1:
-            work();
-            break;
+    let source =
+        include_str!("../../../tests/fixtures/configuration/overrides/cplusplus/switch/before.cpp");
 
-        default:
-            finish();
-            break;
-    }
-}
-";
+    let expected =
+        include_str!("../../../tests/fixtures/configuration/overrides/cplusplus/switch/after.cpp");
 
     assert_eq!(breathe(source).unwrap(), expected);
 }
 
 #[test]
 fn protects_inactive_code_without_pruning_active_code() {
-    let source = r"#if 0
-void inactive() {
-    work();
-    return 1;
-}
-#endif
-void active() {
-    work();
-    return 1;
-}
-";
-    let expected = r"#if 0
-void inactive() {
-    work();
-    return 1;
-}
-#endif
-void active() {
-    work();
-
-    return 1;
-}
-";
+    let source = include_str!("../../../tests/fixtures/cplusplus/inactive/input.cpp");
+    let expected = include_str!("../../../tests/fixtures/cplusplus/inactive/output.cpp");
     let end = source.find("void active").unwrap();
     let protected = 0..end;
     let rules = Rules::default();
@@ -217,6 +97,7 @@ void active() {
         super::breathe(source, &rules, from_ref(&protected)).unwrap(),
         expected
     );
+
     assert_eq!(
         super::breathe(expected, &rules, from_ref(&protected)).unwrap(),
         expected

@@ -2,36 +2,9 @@ use crate::configuration::Rules;
 
 #[test]
 fn spaces_javascript_typescript_and_tsx() {
-    let source = r"function example() {
-    const first = 1;
-    const second = 2; // trailing
-    // attached
-    if (first < second) {
-        work();
-    } else {
-        other();
-    }
-    save();
-    return first;
-}
-";
+    let source = include_str!("../../../tests/fixtures/javascript/spacing/input.js");
 
-    let expected = r"function example() {
-    const first = 1;
-    const second = 2; // trailing
-
-    // attached
-    if (first < second) {
-        work();
-    } else {
-        other();
-    }
-
-    save();
-
-    return first;
-}
-";
+    let expected = include_str!("../../../tests/fixtures/javascript/spacing/output.js");
 
     for language in [
         tree_sitter_javascript::LANGUAGE.into(),

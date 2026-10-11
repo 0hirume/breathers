@@ -1,0 +1,10 @@
+If:
+  PathMatch: ['bridge/.*', 'other/.*']
+  PathExclude: 'bridge/generated/.*'
+CompileFlags:
+  Add:
+    - -std=c++17
+    - '-I../headers with spaces'
+---
+CompileFlags:
+  Add: -DSECOND
