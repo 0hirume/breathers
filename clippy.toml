@@ -1,1 +1,2 @@
 allowed-duplicate-crates = ["hashbrown", "rustc-hash", "syn", "winnow"]
+source-item-ordering = ["module"]

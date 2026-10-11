@@ -40,6 +40,37 @@ all = { level = "deny", priority = -1 }
 cargo = { level = "deny", priority = -1 }
 pedantic = { level = "deny", priority = -1 }
 
+absolute_paths = "deny"
+allow_attributes = "deny"
+allow_attributes_without_reason = "deny"
+arbitrary_source_item_ordering = "deny"
+assertions_on_result_states = "deny"
+branches_sharing_code = "deny"
+clear_with_drain = "deny"
+clone_on_ref_ptr = "deny"
+collection_is_never_read = "deny"
+dbg_macro = "deny"
+debug_assert_with_mut_call = "deny"
+definition_in_module_root = "deny"
+derive_partial_eq_without_eq = "deny"
+fallible_impl_from = "deny"
+inline_modules = "deny"
+let_underscore_must_use = "deny"
+map_err_ignore = "deny"
+multiple_inherent_impl = "deny"
+needless_collect = "deny"
+needless_pass_by_ref_mut = "deny"
+redundant_clone = "deny"
+redundant_test_prefix = "deny"
+redundant_type_annotations = "deny"
+self_named_module_files = "deny"
+single_char_lifetime_names = "deny"
+unneeded_field_pattern = "deny"
+unused_result_ok = "deny"
+unused_trait_names = "deny"
+use_self = "deny"
+verbose_file_reads = "deny"
+
 [lints.rust]
 deprecated_safe = { level = "deny", priority = -1 }
 let_underscore = { level = "deny", priority = -1 }
@@ -47,3 +78,7 @@ rust_2018_idioms = { level = "deny", priority = -1 }
 unsafe_code = "deny"
 unused = { level = "deny", priority = -1 }
 warnings = { level = "deny", priority = -1 }
+
+missing_docs = "deny"
+unreachable_pub = "deny"
+unsafe_op_in_unsafe_fn = "deny"
