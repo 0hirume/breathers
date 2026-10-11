@@ -26,7 +26,7 @@ jobs:
       - name: set up release-plz
         uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca
         with:
-          install_args: release-plz
+          install_args: aqua:release-plz/release-plz
           cache: false
 
       - name: create release token

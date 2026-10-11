@@ -32,7 +32,7 @@ jobs:
       - name: set up dist
         uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca
         with:
-          install_args: cargo-dist
+          install_args: aqua:axodotdev/cargo-dist
           cache: false
 
       - name: set up nushell
@@ -67,7 +67,7 @@ jobs:
       - name: set up dist
         uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca
         with:
-          install_args: cargo-dist
+          install_args: aqua:axodotdev/cargo-dist
           cache: false
 
       - name: set up nushell
@@ -103,7 +103,7 @@ jobs:
       - name: set up dist
         uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca
         with:
-          install_args: cargo-dist
+          install_args: aqua:axodotdev/cargo-dist
           cache: false
 
       - name: set up nushell
