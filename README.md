@@ -1,8 +1,6 @@
 # breathers
 
-Give source code breathing room.
-
-Add blank lines around control flow, blocks, and multiline statements. Keep consecutive simple statements together and preserve existing blank lines, comments, strings, and line endings.
+breathers adds blank lines around control flow, blocks, and multiline statements. It keeps consecutive simple statements together and preserves existing blank lines, comments, strings, and line endings.
 
 ## Example
 
@@ -52,7 +50,7 @@ cargo install --git https://github.com/0hirume/breathers --locked
 
 ## Usage
 
-Run your usual formatter first. Files are edited in place; directories are searched recursively. With no paths, breathers uses the current directory. By default, stderr shows changed files, errors, and one summary.
+Run your usual formatter first. breathers edits files in place and searches directories recursively. If you omit paths, it uses the current directory. By default, it reports changed files, errors, and a summary on stderr.
 
 ```sh
 breathers
@@ -62,7 +60,7 @@ breathers src/main.rs src/main.luau
 
 | Option                        | Short | Behavior                                                                             |
 | ----------------------------- | ----- | ------------------------------------------------------------------------------------ |
-| `--check`                     | `-k`  | Check without writing; exit unsuccessfully when formatting is needed or errors occur |
+| `--check`                     | `-k`  | Check without writing; return a nonzero exit code for needed changes or errors       |
 | `--preview`                   | `-p`  | Print unified diffs to stdout without writing                                        |
 | `--source`                    | `-s`  | Print one selected file's formatted source to stdout without writing                 |
 | `--quiet`                     | `-q`  | Hide success reports and summary, but keep errors                                    |
@@ -78,7 +76,7 @@ breathers src/main.rs src/main.luau
 | `--version`                   | `-V`  | Print the version                                                                    |
 | `--help`                      | `-h`  | Print help                                                                           |
 
-Check, preview, and source modes are mutually exclusive. Source mode requires exactly one selected file and cannot be combined with JSON. Quiet and verbose are mutually exclusive. Quiet does not suppress requested stdout payloads.
+Use at most one of `--check`, `--preview`, and `--source`. `--source` requires exactly one selected file and does not support `--json`. Do not combine `--quiet` and `--verbose`. `--quiet` still prints output you request on stdout.
 
 ```sh
 breathers -k src/
@@ -87,7 +85,7 @@ breathers -s src/main.rs
 breathers -q -i 'src/**/*.rs' -e 'src/generated/**'
 ```
 
-JSON reports include the mode, file statuses, summary counts, and errors. Preview reports include diffs; stdin reports include formatted source. Errors also remain visible on stderr, and failures return an unsuccessful exit status.
+JSON reports include the mode, file statuses, summary counts, and errors. Preview reports include diffs. Stdin reports include formatted source. breathers also prints errors to stderr and returns a nonzero exit code on failure.
 
 | Language         | Extensions                                                               |
 | ---------------- | ------------------------------------------------------------------------ |
@@ -102,13 +100,13 @@ JSON reports include the mode, file statuses, summary counts, and errors. Previe
 | TypeScript / TSX | `.ts`, `.mts`, `.cts`, `.tsx`                                            |
 | PowerShell       | `.ps1`, `.psm1`, `.psd1`                                                 |
 
-Override detection with `-l` / `--language`. Use `-l luau` for Luau files named `.lua`, or `-l tsx` to select TSX explicitly.
+Override detection with `-l` or `--language`. Use `-l luau` for Luau files named `.lua`, or `-l tsx` to select TSX.
 
 ```sh
 breathers -l luau src/module.lua
 ```
 
-For stdin, use `-` as the only path and specify the language or a context filepath. Formatted source goes to stdout; a context filepath is never a write destination:
+To format stdin, use `-` as the only path. Set its language with `-l`, or use `-f` to supply a filepath. breathers prints the result to stdout and does not write to that filepath.
 
 ```sh
 breathers -l luau -
@@ -119,15 +117,15 @@ breathers -f src/module.luau -
 
 C and C++ require LLVM's `libclang` shared library. Install it and set `LIBCLANG_PATH` to its directory if breathers cannot find it.
 
-breathers reads compiler flags from the nearest `compile_commands.json`. Ancestor `.clangd` files can add flags through `CompileFlags.Add`, optionally filtered by `If.PathMatch` and `If.PathExclude`. Other compiler-flag settings are rejected.
+breathers reads compiler flags from the nearest `compile_commands.json`. It also reads `.clangd` files in parent directories, which can add flags with `CompileFlags.Add`. Use `If.PathMatch` and `If.PathExclude` to select which files receive those flags. breathers rejects other compiler-flag settings.
 
 For missing headers or declarations, supply your project's include paths and defines in those files. C compiler errors leave the file unchanged. C++ also accepts syntactically valid snippets with unresolved names. Inactive branches and macro contents stay unchanged.
 
 ## Configuration
 
-Settings come from the nearest `breathers.toml` above the working directory, layered over global settings. Use `-c` / `--config` to select a project configuration explicitly.
+breathers loads global settings, then applies the nearest `breathers.toml` above the working directory. Use `-c` or `--config` to select a project configuration.
 
-Global settings live in `breathers/config.toml` under `%APPDATA%` on Windows, `~/Library/Application Support` on macOS, or `$XDG_CONFIG_HOME` (falling back to `~/.config`) on Linux.
+Global settings use `breathers/config.toml` under `%APPDATA%` on Windows or `~/Library/Application Support` on macOS. On Linux, the base directory is `$XDG_CONFIG_HOME` or, if unset, `~/.config`.
 
 ```toml
 #:schema https://raw.githubusercontent.com/0hirume/breathers/main/schema.json
@@ -143,9 +141,9 @@ returns = false
 tail_expressions = true
 ```
 
-Globs are relative to the project configuration directory, or the working directory when no project configuration is found. CLI includes replace configured includes; CLI exclusions add to configured exclusions. Exclusions win. Directory searches skip `.git` and symbolic links.
+Globs use paths relative to the project configuration directory. If breathers finds no project configuration, it uses the working directory. Command-line includes replace configured includes. Command-line exclusions add to configured exclusions and take precedence over includes. Directory searches skip `.git` and symbolic links.
 
-Language sections control spacing. JSX uses `javascript`; TSX uses `typescript`. Broad groups are enabled by default, and individual rules inherit their group unless explicitly set. `related` is opt-in and keeps adjacent variable dependencies together without removing existing blank lines.
+Language sections control spacing. JSX uses `javascript`. TSX uses `typescript`. breathers enables rule groups by default. Individual rules inherit their group's setting unless you override it. The `related` rule is off by default. Enable it to keep adjacent variable dependencies together. It preserves existing blank lines.
 
 See [`schema.json`](schema.json) for all language sections and options, or run `breathers --schema`.
 
