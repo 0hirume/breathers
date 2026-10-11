@@ -9,33 +9,47 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 env:
   RUSTUP_TOOLCHAIN: nightly
 
 jobs:
   check:
     runs-on: ${{ matrix.system }}
+    timeout-minutes: 60
     strategy:
       matrix:
         system:
-          - ubuntu-latest
-          - macos-latest
-          - windows-latest
+          - ubuntu-26.04
+          - macos-26
+          - windows-2025
     steps:
       - name: check out source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
 
       - name: set up rust
-        run: rustup toolchain install nightly --profile minimal --component rustfmt --component clippy
+        run: rustup toolchain install nightly --profile minimal --component clippy
+
+      - name: set up rustfmt
+        if: runner.os == 'Linux'
+        run: rustup component add rustfmt
+
+      - name: check formatting
+        if: runner.os == 'Linux'
+        run: cargo fmt --check
+
+      - name: set up nushell
+        uses: hustcer/setup-nu@95cd3bfe252450ef7d35dd9a7ddecf3484341134
+        with:
+          check-latest: true
 
       - name: cache rust
         uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
 
-      - name: check formatting, lints, and tests
-        shell: bash
-        run: |
-          cargo fmt --check
-          cargo clippy --all-targets --locked
-          cargo test --locked
+      - name: check lints and tests
+        run: nu scripts/check.nu verify
