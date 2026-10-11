@@ -9,6 +9,9 @@ keywords = ["formatter", "readability", "rust", "whitespace"]
 categories = ["command-line-utilities", "development-tools"]
 publish = false
 
+[package.metadata.dist]
+dist = true
+
 [dependencies]
 clap = { version = "4", features = ["derive", "error-context", "help", "std", "usage"] }
 console = { version = "0.16", features = ["std"] }
@@ -79,3 +82,7 @@ warnings = { level = "deny", priority = -1 }
 missing_docs = "deny"
 unreachable_pub = "deny"
 unsafe_op_in_unsafe_fn = "deny"
+
+[profile.dist]
+inherits = "release"
+lto = "thin"
