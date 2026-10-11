@@ -1,0 +1,4 @@
+fn example() {
+    work();
+    result
+}

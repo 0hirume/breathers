@@ -1,0 +1,13 @@
+local players = game:GetService("Players")
+local storage = game:GetService("ReplicatedStorage")
+local first = require("@first/one")
+local second = require("@first/two")
+local other = require("@other/one")
+type First = first.First
+type Second = string
+export type Third = number
+local before = 1
+local values = {}
+values.first = before
+values.second = 2
+local after = 3

@@ -1,8 +1,38 @@
 # breathers
 
-Give code some breathing room. **breathers** plays on _breathers_ and _breathe-rs_: breathe Rust.
+Give source code breathing room.
 
 Add blank lines around control flow, blocks, and multiline statements. Keep consecutive simple statements together and preserve existing blank lines, comments, strings, and line endings.
+
+## Example
+
+Before:
+
+```rust
+fn example() {
+    let ready = true;
+    let count = 2;
+    if ready {
+        process(count);
+    }
+    finish();
+}
+```
+
+After:
+
+```rust
+fn example() {
+    let ready = true;
+    let count = 2;
+
+    if ready {
+        process(count);
+    }
+
+    finish();
+}
+```
 
 ## Install
 
@@ -63,13 +93,11 @@ breathers --lsp
 
 ## C and C++
 
-C and C++ formatting uses LLVM's `libclang`, loaded at runtime. Make the shared library discoverable or set `LIBCLANG_PATH` to its directory. Other languages do not require it.
+C and C++ require LLVM's `libclang` shared library. Install it and set `LIBCLANG_PATH` to its directory if breathers cannot find it.
 
-Compiler flags come from the nearest ancestor `compile_commands.json`, supporting both `arguments` arrays and quoted `command` strings. Clang selects the source file's command and uses its working directory for relative paths. Ancestor `.clangd` files then add overrides from parent to child. Supported settings are `CompileFlags.Add`, `If.PathMatch`, and `If.PathExclude`, including multiple YAML documents. Conditions match paths relative to their `.clangd` directory; without a compilation command, relative compiler paths use the source file's directory. Other `CompileFlags` settings produce an error. Stdin uses `source.c` for C or `source.cpp` for C++ in the working directory for this discovery; LSP uses the document path and buffer contents.
+breathers reads compiler flags from the nearest `compile_commands.json`. Ancestor `.clangd` files can add flags through `CompileFlags.Add`, optionally filtered by `If.PathMatch` and `If.PathExclude`. Other compiler-flag settings are rejected.
 
-Clang expands macros and parses active conditional branches. Inactive branches and macro contents are left unchanged. C compiler errors, including missing headers or declarations, are reported without writing changes; supply the project's include paths and defines through its compilation database or `.clangd`.
-
-C++ retains a Tree-sitter syntax-only fallback when Clang reports errors, preserving formatting for snippets with unresolved names. If both parsers reject the source, Clang diagnostics are reported and the file is left unchanged.
+For missing headers or declarations, supply your project's include paths and defines in those files. C compiler errors leave the file unchanged. C++ also accepts syntactically valid snippets with unresolved names. Inactive branches and macro contents stay unchanged.
 
 ## Configuration
 
@@ -96,36 +124,6 @@ Globs are relative to the project configuration directory, or the working direct
 Language sections control spacing. JSX uses `javascript`; TSX uses `typescript`. Broad groups are enabled by default, and individual rules inherit their group unless explicitly set. `related` is opt-in and keeps adjacent variable dependencies together without removing existing blank lines.
 
 See [`schema.json`](schema.json) for all language sections and options, or run `breathers --schema`.
-
-## Example
-
-Before:
-
-```rust
-fn example() {
-    let ready = true;
-    let count = 2;
-    if ready {
-        process(count);
-    }
-    finish();
-}
-```
-
-After:
-
-```rust
-fn example() {
-    let ready = true;
-    let count = 2;
-
-    if ready {
-        process(count);
-    }
-
-    finish();
-}
-```
 
 ## Request a language
 

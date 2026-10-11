@@ -1,9 +1,13 @@
 use std::{
     collections::BTreeMap,
+    env, fs,
     future::{Future, ready},
     path::PathBuf,
+    result,
     sync::Mutex,
 };
+
+use tokio::{io, runtime::Builder};
 
 use tower_lsp_server::{
     LanguageServer, LspService, Server,
@@ -16,8 +20,8 @@ use tower_lsp_server::{
 };
 
 use crate::{
-    Language,
-    configuration::{Configuration, Selection},
+    configuration::{self, Selection},
+    languages::Language,
 };
 
 struct Document {
@@ -30,55 +34,6 @@ struct Backend {
     documents: Mutex<BTreeMap<Uri, Document>>,
     directory: PathBuf,
     configuration: Option<PathBuf>,
-}
-
-fn language(identifier: &str, uri: &Uri) -> Option<Language> {
-    match identifier {
-        "rust" => Some(Language::Rust),
-        "lua" => Some(Language::Lua),
-        "luau" => Some(Language::Luau),
-        "c" => Some(Language::C),
-        "cpp" | "c++" => Some(Language::CPlusPlus),
-        "python" => Some(Language::Python),
-        "nu" | "nushell" => Some(Language::Nushell),
-        "powershell" => Some(Language::Powershell),
-        "javascript" | "javascriptreact" | "jsx" => Some(Language::Javascript),
-        "typescript" => Some(Language::Typescript),
-        "typescriptreact" | "tsx" => Some(Language::Tsx),
-
-        _ if uri.scheme().as_str().eq_ignore_ascii_case("file") => {
-            uri.to_file_path().and_then(|path| Language::infer(&path))
-        }
-
-        _ => None,
-    }
-}
-
-fn end(source: &str) -> Result<Position> {
-    let mut position = Position::default();
-    let mut characters = source.chars().peekable();
-
-    while let Some(character) = characters.next() {
-        if matches!(character, '\r' | '\n') {
-            if character == '\r' && characters.peek() == Some(&'\n') {
-                characters.next();
-            }
-
-            position.line = position
-                .line
-                .checked_add(1)
-                .ok_or_else(|| Error::invalid_params("Document has too many lines"))?;
-
-            position.character = 0;
-        } else {
-            position.character = position
-                .character
-                .checked_add(u32::try_from(character.len_utf16()).unwrap())
-                .ok_or_else(|| Error::invalid_params("Document line is too long"))?;
-        }
-    }
-
-    Ok(position)
 }
 
 impl LanguageServer for Backend {
@@ -184,13 +139,13 @@ impl Backend {
             .unwrap_or(&self.directory);
 
         let (configuration, root) =
-            Configuration::load_in(directory, self.configuration.as_deref())
+            configuration::load_in(directory, self.configuration.as_deref())
                 .map_err(Error::invalid_params)?;
 
         let selection = Selection::new(&configuration, root).map_err(Error::invalid_params)?;
 
         if let Some(path) = path.as_ref() {
-            let directory = std::fs::canonicalize(directory)
+            let directory = fs::canonicalize(directory)
                 .map_err(|error| Error::invalid_params(error.to_string()))?;
 
             let name = path
@@ -217,11 +172,11 @@ impl Backend {
     }
 }
 
-pub fn run(configuration: Option<PathBuf>) -> std::result::Result<(), String> {
-    let directory = std::env::current_dir().map_err(|error| error.to_string())?;
+pub(crate) fn run(configuration: Option<PathBuf>) -> result::Result<(), String> {
+    let directory = env::current_dir().map_err(|error| error.to_string())?;
     let configuration = configuration.map(|path| directory.join(path));
 
-    tokio::runtime::Builder::new_current_thread()
+    Builder::new_current_thread()
         .build()
         .map_err(|error| error.to_string())?
         .block_on(async {
@@ -231,7 +186,7 @@ pub fn run(configuration: Option<PathBuf>) -> std::result::Result<(), String> {
                 configuration,
             });
 
-            Server::new(tokio::io::stdin(), tokio::io::stdout(), socket)
+            Server::new(io::stdin(), io::stdout(), socket)
                 .concurrency_level(1)
                 .serve(service)
                 .await;
@@ -240,8 +195,59 @@ pub fn run(configuration: Option<PathBuf>) -> std::result::Result<(), String> {
     Ok(())
 }
 
+fn language(identifier: &str, uri: &Uri) -> Option<Language> {
+    match identifier {
+        "rust" => Some(Language::Rust),
+        "lua" => Some(Language::Lua),
+        "luau" => Some(Language::Luau),
+        "c" => Some(Language::C),
+        "cpp" | "c++" => Some(Language::CPlusPlus),
+        "python" => Some(Language::Python),
+        "nu" | "nushell" => Some(Language::Nushell),
+        "powershell" => Some(Language::Powershell),
+        "javascript" | "javascriptreact" | "jsx" => Some(Language::Javascript),
+        "typescript" => Some(Language::Typescript),
+        "typescriptreact" | "tsx" => Some(Language::Tsx),
+
+        _ if uri.scheme().as_str().eq_ignore_ascii_case("file") => {
+            uri.to_file_path().and_then(|path| Language::infer(&path))
+        }
+
+        _ => None,
+    }
+}
+
+fn end(source: &str) -> Result<Position> {
+    let mut position = Position::default();
+    let mut characters = source.chars().peekable();
+
+    while let Some(character) = characters.next() {
+        if matches!(character, '\r' | '\n') {
+            if character == '\r' && characters.peek() == Some(&'\n') {
+                characters.next();
+            }
+
+            position.line = position
+                .line
+                .checked_add(1)
+                .ok_or_else(|| Error::invalid_params("Document has too many lines"))?;
+
+            position.character = 0;
+        } else {
+            position.character = position
+                .character
+                .checked_add(u32::try_from(character.len_utf16()).unwrap())
+                .ok_or_else(|| Error::invalid_params("Document line is too long"))?;
+        }
+    }
+
+    Ok(position)
+}
+
 #[cfg(test)]
 mod tests {
+    use super::Position;
+
     #[test]
     fn counts_utf16_positions_and_line_endings() {
         for (source, line, character) in [
@@ -250,10 +256,7 @@ mod tests {
             ("a\r\n🙂", 1, 2),
             ("a\rb\n", 2, 0),
         ] {
-            assert_eq!(
-                super::end(source).unwrap(),
-                tower_lsp_server::ls_types::Position::new(line, character)
-            );
+            assert_eq!(super::end(source).unwrap(), Position::new(line, character));
         }
     }
 }

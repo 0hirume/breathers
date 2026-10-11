@@ -1,0 +1,3 @@
+work()
+
+return 1

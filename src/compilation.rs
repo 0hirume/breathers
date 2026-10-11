@@ -1,6 +1,8 @@
 use std::{
     fs,
+    io::ErrorKind,
     path::{Path, PathBuf},
+    slice,
 };
 
 use regex::Regex;
@@ -16,7 +18,7 @@ enum Strings {
 impl Strings {
     fn values(&self) -> &[String] {
         match self {
-            Self::One(value) => std::slice::from_ref(value),
+            Self::One(value) => slice::from_ref(value),
             Self::Many(values) => values,
         }
     }
@@ -159,7 +161,7 @@ fn database(path: &Path) -> Result<Option<(PathBuf, Vec<String>)>, String> {
     Ok(None)
 }
 
-pub fn arguments(path: &Path) -> Result<Vec<String>, String> {
+pub(crate) fn arguments(path: &Path) -> Result<Vec<String>, String> {
     let directory = path.parent().ok_or("Source path has no parent directory")?;
 
     let (working_directory, mut arguments) =
@@ -186,7 +188,7 @@ pub fn arguments(path: &Path) -> Result<Vec<String>, String> {
 
         let source = match fs::read_to_string(&configuration) {
             Ok(source) => source,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(error) if error.kind() == ErrorKind::NotFound => continue,
             Err(error) => return Err(format!("{}: {error}", configuration.display())),
         };
 
@@ -207,7 +209,17 @@ pub fn arguments(path: &Path) -> Result<Vec<String>, String> {
 mod tests {
     #[test]
     fn reads_conditional_yaml_documents() {
-        let source = "If:\n  PathMatch: ['bridge/.*', 'other/.*']\n  PathExclude: 'bridge/generated/.*'\nCompileFlags:\n  Add:\n    - -std=c++17\n    - '-I../headers with spaces'\n---\nCompileFlags:\n  Add: -DSECOND\n";
+        let source = r"If:
+  PathMatch: ['bridge/.*', 'other/.*']
+  PathExclude: 'bridge/generated/.*'
+CompileFlags:
+  Add:
+    - -std=c++17
+    - '-I../headers with spaces'
+---
+CompileFlags:
+  Add: -DSECOND
+";
         let mut arguments = Vec::new();
         super::extend(source, "bridge/source.cpp", &mut arguments).unwrap();
 

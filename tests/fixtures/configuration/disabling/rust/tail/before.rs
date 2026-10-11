@@ -1,0 +1,4 @@
+fn example() {
+    first();
+    value
+}
