@@ -164,6 +164,9 @@ fn complex(node: &SyntaxNode, rules: &Rules) -> bool {
 fn items(node: &SyntaxNode) -> bool {
     matches!(
         node.kind(),
-        SyntaxKind::SOURCE_FILE | SyntaxKind::ITEM_LIST | SyntaxKind::ASSOC_ITEM_LIST
+        SyntaxKind::SOURCE_FILE
+            | SyntaxKind::ITEM_LIST
+            | SyntaxKind::ASSOC_ITEM_LIST
+            | SyntaxKind::EXTERN_ITEM_LIST
     )
 }

@@ -45,6 +45,36 @@ multiline = false
 }
 
 #[test]
+fn spaces_multiline_extern_items() {
+    let expected = r#"extern "Rust" {
+    type Context<'host>;
+    fn source(self: &Context<'_>, module: &str) -> Result<Text>;
+
+    fn child(
+        self: &Context<'_>,
+        module: &str,
+        name: &str,
+        destination: &mut String,
+    ) -> Result<Status>;
+
+    fn configuration(self: &Context<'_>, module: &str) -> Result<Configuration>;
+}
+"#;
+
+    let source = expected.replace("\n\n", "\n");
+    assert_eq!(breathe(&source).unwrap(), expected);
+    assert_eq!(breathe(expected).unwrap(), expected);
+
+    assert_eq!(
+        breathe(&source.replace('\n', "\r\n")).unwrap(),
+        expected.replace('\n', "\r\n")
+    );
+
+    let rules: Rules = toml::from_str("multiline = false").unwrap();
+    assert_eq!(super::breathe(&source, &rules).unwrap(), source);
+}
+
+#[test]
 fn spaces_function_items_in_files_modules_and_implementations() {
     let functions = include_str!("../../../tests/fixtures/rust/functions/input.rs");
     let expected = include_str!("../../../tests/fixtures/rust/functions/output.rs");
