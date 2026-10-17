@@ -125,8 +125,13 @@ pub(crate) struct Rules(pub(super) BTreeMap<Rule, bool>);
 
 impl Rules {
     pub(crate) fn enabled(&self, rule: Rule) -> bool {
+        self.enabled_or(rule, rule != Rule::Related)
+    }
+
+    pub(crate) fn enabled_or(&self, rule: Rule, default: bool) -> bool {
         self.0.get(&rule).copied().unwrap_or_else(|| {
-            rule != Rule::Related && rule.parent().is_none_or(|parent| self.enabled(parent))
+            rule.parent()
+                .map_or(default, |parent| self.enabled_or(parent, default))
         })
     }
 }

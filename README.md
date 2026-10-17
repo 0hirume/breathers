@@ -137,9 +137,9 @@ returns = false
 tail_expressions = true
 ```
 
-Globs use paths relative to the project configuration directory. If breathers finds no project configuration, it uses the working directory. Command-line includes replace configured includes. Command-line exclusions add to configured exclusions and take precedence over includes. Directory searches skip `.git` and symbolic links.
+Globs use paths relative to the project configuration directory. If breathers finds no project configuration, it uses the working directory. Command-line includes replace configured includes. Command-line exclusions add to configured exclusions and take precedence over includes. Directory searches skip `.git`, `target`, `.venv`, `node_modules`, and symbolic links.
 
-Language sections control spacing. JSX uses `javascript`. TSX uses `typescript`. breathers enables rule groups by default. Individual rules inherit their group's setting unless you override it. The `related` rule is off by default. Enable it to keep adjacent variable dependencies together. It preserves existing blank lines.
+Language sections control spacing. JSX uses `javascript`. TSX uses `typescript`. breathers enables rule groups by default. Individual rules inherit their group's setting unless you override it. Nushell's `match_arms` and `record_fields` and Python's `dictionary_entries` default to off unless you enable the rule or its group. The `related` rule is off by default. Enable it to keep adjacent variable dependencies together. It preserves existing blank lines.
 
 See [`schema.json`](schema.json) for all language sections and options, or run `breathers --schema`.
 

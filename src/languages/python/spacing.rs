@@ -43,7 +43,7 @@ fn separate(pair: Pair<'_>, source: &str, rules: &Rules) -> bool {
     } = pair;
 
     let separate = if parent.kind() == "dictionary" {
-        rules.enabled(Rule::DictionaryEntries)
+        rules.enabled_or(Rule::DictionaryEntries, false)
             && (multiline(left, source, opaque) || multiline(right, source, opaque))
     } else if left.kind() == "case_clause" && right.kind() == "case_clause" {
         rules.enabled(Rule::MatchCases)

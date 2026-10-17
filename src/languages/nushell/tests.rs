@@ -136,27 +136,34 @@ use example ready
 
 #[test]
 fn spaces_records_match_arms_and_closures() {
-    for (source, expected) in [
+    for (source, default, expected) in [
         (
             include_str!("../../../tests/fixtures/nushell/record/input.nu"),
+            "let value = {\n    first: 1\n    second: [\n        2\n    ]\n    third: 3\n}\n\nprint $value\n",
             include_str!("../../../tests/fixtures/nushell/record/output.nu"),
         ),
         (
+            include_str!("../../../tests/fixtures/nushell/matching/input.nu"),
             include_str!("../../../tests/fixtures/nushell/matching/input.nu"),
             include_str!("../../../tests/fixtures/nushell/matching/output.nu"),
         ),
         (
             include_str!("../../../tests/fixtures/nushell/closure/input.nu"),
             include_str!("../../../tests/fixtures/nushell/closure/output.nu"),
+            include_str!("../../../tests/fixtures/nushell/closure/output.nu"),
         ),
     ] {
-        let formatted = super::breathe(source, &Rules::default()).unwrap();
-        assert_eq!(formatted, expected);
+        assert_eq!(super::breathe(source, &Rules::default()).unwrap(), default);
+        assert_eq!(super::breathe(default, &Rules::default()).unwrap(), default);
 
-        assert_eq!(
-            super::breathe(expected, &Rules::default()).unwrap(),
-            expected
-        );
+        for configuration in [
+            "record_fields = true\nmatch_arms = true",
+            "fields = true\narms = true",
+        ] {
+            let rules: Rules = toml::from_str(configuration).unwrap();
+            assert_eq!(super::breathe(source, &rules).unwrap(), expected);
+            assert_eq!(super::breathe(expected, &rules).unwrap(), expected);
+        }
     }
 }
 

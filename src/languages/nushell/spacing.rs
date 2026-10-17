@@ -57,7 +57,8 @@ fn separate(pair: Pair<'_>, source: &str, rules: &Rules) -> bool {
             Rule::MatchArms
         };
 
-        rules.enabled(rule) && (multiline(left, source, opaque) || multiline(right, source, opaque))
+        rules.enabled_or(rule, false)
+            && (multiline(left, source, opaque) || multiline(right, source, opaque))
     } else {
         complex(left, source, rules)
             || complex(right, source, rules)

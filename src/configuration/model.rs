@@ -19,7 +19,7 @@ pub(crate) struct Configuration {
     pub(crate) include: Option<Vec<String>>,
 
     #[schemars(
-        description = "Exclude files and directories matching these globs, using the same root as include. Default: inherit the global list, otherwise add no exclusions. An empty list clears inherited exclusions; directory searches still skip .git and symbolic links."
+        description = "Exclude files and directories matching these globs, using the same root as include. Default: inherit the global list, otherwise add no exclusions. An empty list clears inherited exclusions; directory searches still skip .git, target, .venv, node_modules, and symbolic links."
     )]
     pub(crate) exclude: Option<Vec<String>>,
 

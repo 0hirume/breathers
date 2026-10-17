@@ -774,10 +774,29 @@ fn controls_fields_arms_and_variants_in_new_languages() {
             fixture!("disabling/typescript/enum", "ts", "before"),
         ),
     ] {
-        assert_ne!(
-            language.format(source, &Configuration::default()).unwrap(),
-            source
-        );
+        if language == Language::Python && rule == "fields" {
+            assert_eq!(
+                language.format(source, &Configuration::default()).unwrap(),
+                source
+            );
+        } else {
+            assert_ne!(
+                language.format(source, &Configuration::default()).unwrap(),
+                source
+            );
+        }
+
+        let configuration: Configuration =
+            toml::from_str(&format!("[{section}]\n{rule} = true")).unwrap();
+
+        assert_ne!(language.format(source, &configuration).unwrap(), source);
+
+        if language == Language::Python && rule == "fields" {
+            let configuration: Configuration =
+                toml::from_str("[python]\ndictionary_entries = true").unwrap();
+
+            assert_ne!(language.format(source, &configuration).unwrap(), source);
+        }
 
         let configuration: Configuration =
             toml::from_str(&format!("[{section}]\n{rule} = false")).unwrap();

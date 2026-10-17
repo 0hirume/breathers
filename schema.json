@@ -217,15 +217,21 @@
       "default": {}
     },
     "exclude": {
-      "description": "Exclude files and directories matching these globs, using the same root as include. Default: inherit the global list, otherwise add no exclusions. An empty list clears inherited exclusions; directory searches still skip .git and symbolic links.",
-      "type": ["array", "null"],
+      "description": "Exclude files and directories matching these globs, using the same root as include. Default: inherit the global list, otherwise add no exclusions. An empty list clears inherited exclusions; directory searches still skip .git, target, .venv, node_modules, and symbolic links.",
+      "type": [
+        "array",
+        "null"
+      ],
       "items": {
         "type": "string"
       }
     },
     "include": {
       "description": "Include files matching these globs, relative to the project configuration directory or current working directory. Default: inherit the global list, otherwise select all eligible files. An empty list selects none. Exclusions win.",
-      "type": ["array", "null"],
+      "type": [
+        "array",
+        "null"
+      ],
       "items": {
         "type": "string"
       }
@@ -603,8 +609,9 @@
           "type": "boolean"
         },
         "match_arms": {
-          "description": "Separate multiline Rust and Nushell match arms. Inherits `arms`. Omitted project keys inherit global settings first.",
-          "type": "boolean"
+          "description": "Separate multiline Rust and Nushell match arms. Inherits `arms`. Defaults to false. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": false
         },
         "matches": {
           "description": "Separate match statements and expressions. Inherits `blocks`. Omitted project keys inherit global settings first.",
@@ -628,8 +635,9 @@
           "type": "boolean"
         },
         "record_fields": {
-          "description": "Separate multiline Nushell record fields. Inherits `fields`. Omitted project keys inherit global settings first.",
-          "type": "boolean"
+          "description": "Separate multiline Nushell record fields. Inherits `fields`. Defaults to false. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": false
         },
         "related": {
           "description": "Keep adjacent variable dependencies together without removing existing blank lines. Omitted project keys inherit global settings first.",
@@ -825,8 +833,9 @@
           "type": "boolean"
         },
         "dictionary_entries": {
-          "description": "Separate multiline Python and PowerShell dictionary entries. Inherits `fields`. Omitted project keys inherit global settings first.",
-          "type": "boolean"
+          "description": "Separate multiline Python and PowerShell dictionary entries. Inherits `fields`. Defaults to false. Omitted project keys inherit global settings first.",
+          "type": "boolean",
+          "default": false
         },
         "fields": {
           "description": "Separate multiline fields, members, and dictionary entries. Omitted project keys inherit global settings first.",

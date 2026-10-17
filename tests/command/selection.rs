@@ -104,12 +104,17 @@ fn formats_selected_files() {
     ];
 
     for (arguments, changed) in [
-        (vec![], files.to_vec()),
+        (
+            vec![],
+            vec!["main.c", "src/main.cpp", "src/header.h", "src/header.hpp"],
+        ),
         (
             vec!["src"],
             vec!["src/main.cpp", "src/header.h", "src/header.hpp"],
         ),
         (vec!["src/main.cpp"], vec!["src/main.cpp"]),
+        (vec!["target"], vec![]),
+        (vec!["target/generated.c"], vec!["target/generated.c"]),
     ] {
         for file in files {
             fs::write(root.join(file), source).unwrap();

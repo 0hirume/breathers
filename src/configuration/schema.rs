@@ -237,8 +237,8 @@ pub(super) fn document(schema: &mut schemars::Schema) {
         .and_then(serde_json::Value::as_object_mut)
         .expect("Configuration properties");
 
-    for (name, section) in properties {
-        if matches!(name.as_str(), "include" | "exclude") {
+    for (language, section) in properties {
+        if matches!(language.as_str(), "include" | "exclude") {
             section
                 .as_object_mut()
                 .expect("Selection schema")
@@ -267,8 +267,20 @@ pub(super) fn document(schema: &mut schemars::Schema) {
                     String::new()
                 };
 
+                let default = if matches!(
+                    (language.as_str(), rule),
+                    ("nushell", Rule::MatchArms | Rule::RecordFields)
+                        | ("python", Rule::DictionaryEntries)
+                ) {
+                    property["default"] = false.into();
+
+                    " Defaults to false."
+                } else {
+                    ""
+                };
+
                 property["description"] = format!(
-                    "{}{inheritance} Omitted project keys inherit global settings first.",
+                    "{}{inheritance}{default} Omitted project keys inherit global settings first.",
                     description(rule)
                 )
                 .into();
@@ -372,11 +384,11 @@ mod tests {
 
         let properties = schema.get("properties").unwrap().as_object().unwrap();
 
-        for (name, section) in properties {
+        for (language, section) in properties {
             let description = section["description"].as_str().unwrap();
-            assert!(description.contains("Default:"), "{name}");
+            assert!(description.contains("Default:"), "{language}");
 
-            if matches!(name.as_str(), "include" | "exclude") {
+            if matches!(language.as_str(), "include" | "exclude") {
                 assert!(section.get("default").is_none());
                 assert!(description.contains("inherit the global list"));
                 continue;
@@ -396,7 +408,15 @@ mod tests {
                         "{name}"
                     );
 
-                    assert!(property.get("default").is_none(), "{name}");
+                    if matches!(
+                        (language.as_str(), rule),
+                        ("nushell", Rule::MatchArms | Rule::RecordFields)
+                            | ("python", Rule::DictionaryEntries)
+                    ) {
+                        assert_eq!(property["default"], false, "{language}.{name}");
+                    } else {
+                        assert!(property.get("default").is_none(), "{name}");
+                    }
                 } else {
                     let enabled = super::Rules::default().enabled(rule);
                     assert_eq!(property["default"], enabled, "{name}");

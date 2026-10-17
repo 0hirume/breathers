@@ -19,7 +19,14 @@ pub(super) fn collect(
         fs::metadata(&canonical).map_err(|error| format!("{}: {error}", path.display()))?;
 
     if metadata.is_dir() {
-        if selection.excluded_directory(&canonical) || !directories.insert(canonical.clone()) {
+        if canonical.file_name().is_some_and(|name| {
+            matches!(
+                name.to_str(),
+                Some(".git" | "target" | ".venv" | "node_modules")
+            )
+        }) || selection.excluded_directory(&canonical)
+            || !directories.insert(canonical.clone())
+        {
             return Ok(());
         }
 
@@ -32,7 +39,7 @@ pub(super) fn collect(
                 .file_type()
                 .map_err(|error| format!("{}: {error}", entry.path().display()))?;
 
-            if kind.is_symlink() || (kind.is_dir() && entry.file_name() == ".git") {
+            if kind.is_symlink() {
                 continue;
             }
 
@@ -76,7 +83,15 @@ mod tests {
 
         fs::create_dir(&root).unwrap();
 
-        for directory in ["src", "src/nested", "target", ".git"] {
+        for directory in [
+            "src",
+            "src/nested",
+            "target",
+            ".venv",
+            "node_modules",
+            "src/nested/target",
+            ".git",
+        ] {
             fs::create_dir(root.join(directory)).unwrap();
         }
 
@@ -90,6 +105,9 @@ mod tests {
             "src/header.hpp",
             "src/notes.txt",
             "target/generated.rs",
+            ".venv/generated.py",
+            "node_modules/generated.js",
+            "src/nested/target/generated.rs",
             ".git/ignored.rs",
         ] {
             fs::write(root.join(file), "fn example() {}\n").unwrap();
@@ -103,7 +121,6 @@ mod tests {
             "src/header.h",
             "src/main.cpp",
             "src/header.hpp",
-            "target/generated.rs",
         ]
         .map(|path| fs::canonicalize(root.join(path)).unwrap())
         .into_iter()
