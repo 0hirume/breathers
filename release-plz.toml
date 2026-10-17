@@ -2,3 +2,22 @@
 git_only = true
 git_release_enable = false
 release_always = false
+
+[changelog]
+body = """
+## [{{ version }}]{%- if release_link -%}({{ release_link }}){% endif %} - {{ timestamp | date(format="%Y-%m-%d") }}
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | upper_first }}
+{% for commit in commits %}
+{%- if not commit.scope %}
+- {% if commit.breaking %}[**breaking**] {% endif %}{{ commit.message }}{%- if commit.links %} ({% for link in commit.links %}[{{link.text}}]({{link.href}}) {% endfor -%}){% endif %}
+{%- endif %}
+{%- endfor %}
+{% for scope, commits in commits | group_by(attribute="scope") %}
+#### {{ scope | upper_first }}
+{% for commit in commits %}
+- {% if commit.breaking %}[**breaking**] {% endif %}{{ commit.message }}{%- if commit.links %} ({% for link in commit.links %}[{{link.text}}]({{link.href}}) {% endfor -%}){% endif %}
+{%- endfor %}
+{% endfor -%}
+{% endfor %}
+"""

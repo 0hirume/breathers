@@ -4,7 +4,6 @@ members = ["cargo:."]
 [dist]
 cargo-dist-version = "0.33.0"
 hosting = ["github"]
-installers = ["shell", "powershell"]
 targets = [
   "aarch64-apple-darwin",
   "aarch64-unknown-linux-gnu",

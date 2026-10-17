@@ -118,7 +118,7 @@ jobs:
           path: target/distrib
           merge-multiple: true
 
-      - name: build installers and checksums
+      - name: build checksums
         run: nu scripts/release.nu package
 
       - name: publish release

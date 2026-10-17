@@ -75,7 +75,7 @@ def "main package" []: nothing -> nothing {
 def "main publish" []: nothing -> string {
     let manifest = open dist-manifest.json
     let notes = $env.RUNNER_TEMP | path join notes.md
-    $manifest.announcement_github_body | save --force $notes
+    $manifest.announcement_changelog | save --force $notes
 
     let arguments = if $manifest.announcement_is_prerelease {
         [--prerelease]
@@ -83,6 +83,5 @@ def "main publish" []: nothing -> string {
         []
     }
 
-    let artifacts = $manifest.upload_files | append dist-manifest.json
-    gh release create $env.GITHUB_REF_NAME --verify-tag --title $env.GITHUB_REF_NAME --notes-file $notes ...$arguments ...$artifacts
+    gh release create $env.GITHUB_REF_NAME --verify-tag --title $env.GITHUB_REF_NAME --notes-file $notes ...$arguments ...$manifest.upload_files
 }
