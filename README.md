@@ -1,6 +1,6 @@
 # breathers
 
-breathers adds blank lines around control flow, blocks, and multiline statements. It keeps consecutive simple statements together and preserves existing blank lines, comments, strings, and line endings.
+breathers adds blank lines around control flow, blocks, and multiline statements.
 
 ## Example
 
@@ -40,120 +40,47 @@ With [mise](https://mise.jdx.dev):
 mise use -g github:0hirume/breathers
 ```
 
-Or download a binary for your platform from [GitHub Releases](https://github.com/0hirume/breathers/releases), extract it, and place it on your `PATH`.
-
-To build from source with Cargo, install Rust and a C/C++ compiler for the Tree-sitter dependencies:
-
-```sh
-cargo install --git https://github.com/0hirume/breathers --locked
-```
+Or download a binary from [GitHub Releases](https://github.com/0hirume/breathers/releases) and place it on your `PATH`.
 
 ## Usage
 
-Run your usual formatter first. breathers edits files in place and searches directories recursively. If you omit paths, it uses the current directory. By default, it reports changed files, errors, and a summary on stderr.
+Run your formatter first. breathers edits files in place.
 
 ```sh
-breathers
 breathers src/
-breathers src/main.rs src/main.luau
+breathers --check src/
+breathers --preview src/main.rs
 ```
 
-| Option                        | Short | Behavior                                                                             |
-| ----------------------------- | ----- | ------------------------------------------------------------------------------------ |
-| `--check`                     | `-k`  | Check without writing; return a nonzero exit code for needed changes or errors       |
-| `--preview`                   | `-p`  | Print unified diffs to stdout without writing                                        |
-| `--source`                    | `-s`  | Print one selected file's formatted source to stdout without writing                 |
-| `--quiet`                     | `-q`  | Hide success reports and summary, but keep errors                                    |
-| `--verbose`                   | `-v`  | Show progress and unchanged files                                                    |
-| `--include PATTERN`           | `-i`  | Select using Git-ignore-style patterns; repeatable, replaces configured includes      |
-| `--exclude PATTERN`           | `-e`  | Exclude using Git-ignore-style patterns; repeatable, adds to configured exclusions    |
-| `--stdin-filepath PATH`       | `-f`  | Give stdin a language and configuration without writing that path                   |
-| `--json`                      | `-j`  | Print a JSON report to stdout                                                        |
-| `--color auto\|always\|never` | `-C`  | Control diagnostic colors; automatic colors respect terminals and `NO_COLOR`         |
-| `--language LANGUAGE`         | `-l`  | Override language detection                                                          |
-| `--config PATH`               | `-c`  | Use an explicit project configuration                                                |
-| `--schema`                    | `-S`  | Print the configuration JSON Schema                                                  |
-| `--version`                   | `-V`  | Print the version                                                                    |
-| `--help`                      | `-h`  | Print help                                                                           |
+`--check` exits nonzero for needed changes or errors. `--preview` prints a diff.
 
-Use at most one of `--check`, `--preview`, and `--source`. `--source` requires exactly one selected file and does not support `--json`. Do not combine `--quiet` and `--verbose`. `--quiet` still prints output you request on stdout.
+Supports Rust, Lua, Luau, C, C++, Python, Nushell, JavaScript, JSX, TypeScript, TSX, and PowerShell.
+
+For Luau in `.lua` files, use `--language luau`.
+
+For stdin:
 
 ```sh
-breathers -k src/
-breathers -p src/main.rs
-breathers -s src/main.rs
-breathers -q -i 'src/**/*.rs' -e 'src/generated/**'
+breathers --stdin-filepath src/main.rs -
 ```
 
-JSON reports include the mode, file statuses, summary counts, and errors. Preview reports include diffs. Stdin reports include formatted source. breathers also prints errors to stderr and returns a nonzero exit code on failure.
-
-| Language         | Extensions                                                               |
-| ---------------- | ------------------------------------------------------------------------ |
-| Rust             | `.rs`                                                                    |
-| Lua              | `.lua`                                                                   |
-| Luau             | `.luau`                                                                  |
-| C                | `.c`, `.h`                                                               |
-| C++              | `.cpp`, `.cc`, `.cxx`, `.c++`, `.hpp`, `.hh`, `.hxx`, `.h++`, `.C`, `.H` |
-| Python           | `.py`, `.pyi`                                                            |
-| Nushell          | `.nu`                                                                    |
-| JavaScript / JSX | `.js`, `.jsx`, `.mjs`, `.cjs`                                            |
-| TypeScript / TSX | `.ts`, `.mts`, `.cts`, `.tsx`                                            |
-| PowerShell       | `.ps1`, `.psm1`, `.psd1`                                                 |
-
-Override detection with `-l` or `--language`. Use `-l luau` for Luau files named `.lua`, or `-l tsx` to select TSX.
-
-```sh
-breathers -l luau src/module.lua
-```
-
-To format stdin, use `-` as the only path. Set its language with `-l`, or use `-f` to supply a filepath. breathers prints the result to stdout and does not write to that filepath.
-
-```sh
-breathers -l luau -
-breathers -f src/module.luau -
-```
-
-## C and C++
-
-breathers formats C and C++ source syntax with Tree-sitter. Macro text and the bodies of literal `#if 0` branches stay unchanged. Other conditional branches are formatted as source syntax. Syntax errors leave files unchanged.
+Run `breathers --help` for all options.
 
 ## Configuration
 
-breathers loads global settings, then applies the nearest `breathers.toml` starting in each source file's directory and searching its ancestors. Nested projects and multiple input projects each use their own configuration. Use `-c` or `--config` to select one project configuration for all inputs; relative configuration paths resolve from the working directory. Stdin uses `--stdin-filepath` for configuration lookup when supplied, otherwise the working directory.
-
-Global settings use `breathers/config.toml` under `%APPDATA%` on Windows or `~/Library/Application Support` on macOS. On Linux, the base directory is `$XDG_CONFIG_HOME` or, if unset, `~/.config`.
+Settings come from the nearest `breathers.toml` above each file. Override with `--config PATH`.
 
 ```toml
-#:schema https://raw.githubusercontent.com/0hirume/breathers/main/schema.json
-
 include = ["src/**"]
-exclude = ["**/generated/**"]
+exclude = ["generated"]
 
 [luau]
 related = true
 
 [rust]
 returns = false
-tail_expressions = true
 ```
 
-Include and exclude lists use ordered Git-ignore-style patterns rooted at the project configuration directory, or the working directory when no project configuration exists:
+Patterns use Git-ignore syntax. Directory searches respect `.gitignore`.
 
-- `fixtures` matches files or directories named `fixtures` at any depth, including `tests/fixtures`.
-- `/fixtures` matches only at the configuration root. A slash within a pattern, such as `tests/fixtures`, also makes it root-relative.
-- `fixtures/` matches only directories and their contents.
-- `*`, `?`, and character classes match within a path component; `**` can match across directories.
-- Later matching rules win. In exclusions, `!pattern` re-includes matching paths, provided their parent directories are not excluded. For example, `["fixtures/*", "!fixtures/keep.luau"]` keeps that file selectable.
-- Blank patterns and patterns starting with `#` are ignored. Backslashes escape leading `#` or `!` and trailing spaces; TOML literal strings such as `'\#notes'` preserve those backslashes.
-
-Positive include patterns select matching files and directory contents; negated patterns remove them from selection. Command-line includes replace configured includes. Command-line exclusions append to configured exclusions, so later command-line negations can undo configured rules. Exclusions take precedence over includes. Directory searches skip `.git`, `target`, `.venv`, `node_modules`, and symbolic links.
-
-Directory searches respect parent and nested `.gitignore` files, including negation patterns, even outside Git repositories. Explicitly named files bypass Git ignores; configured and command-line includes and exclusions still apply.
-
-Language sections control spacing. JSX uses `javascript`. TSX uses `typescript`. breathers enables rule groups by default. Individual rules inherit their group's setting unless you override it. Nushell's `match_arms` and `record_fields` and Python's `dictionary_entries` default to off unless you enable the rule or its group. The `related` rule is off by default. Enable it to keep adjacent variable dependencies together. It preserves existing blank lines.
-
-See [`schema.json`](schema.json) for all language sections and options, or run `breathers --schema`.
-
-## Request a language
-
-[Open an issue](https://github.com/0hirume/breathers/issues/new) with the language and a before/after example showing the spacing you want.
+`related` keeps adjacent variable dependencies together. See [the schema](https://0hirume.github.io/breathers/schema.json) for all settings.
