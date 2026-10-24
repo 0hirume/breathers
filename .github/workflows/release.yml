@@ -30,13 +30,13 @@ jobs:
           persist-credentials: false
 
       - name: set up dist
-        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca
+        uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550
         with:
           install_args: aqua:axodotdev/cargo-dist
           cache: false
 
       - name: set up nushell
-        uses: hustcer/setup-nu@95cd3bfe252450ef7d35dd9a7ddecf3484341134
+        uses: hustcer/setup-nu@eacad52a4634c4f8d17a94916f93be6856861b9c
         with:
           check-latest: true
 
@@ -65,13 +65,13 @@ jobs:
         run: rustup toolchain install nightly --profile minimal
 
       - name: set up dist
-        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca
+        uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550
         with:
           install_args: aqua:axodotdev/cargo-dist
           cache: false
 
       - name: set up nushell
-        uses: hustcer/setup-nu@95cd3bfe252450ef7d35dd9a7ddecf3484341134
+        uses: hustcer/setup-nu@eacad52a4634c4f8d17a94916f93be6856861b9c
         with:
           check-latest: true
 
@@ -101,13 +101,13 @@ jobs:
           persist-credentials: false
 
       - name: set up dist
-        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca
+        uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550
         with:
           install_args: aqua:axodotdev/cargo-dist
           cache: false
 
       - name: set up nushell
-        uses: hustcer/setup-nu@95cd3bfe252450ef7d35dd9a7ddecf3484341134
+        uses: hustcer/setup-nu@eacad52a4634c4f8d17a94916f93be6856861b9c
         with:
           check-latest: true
 
