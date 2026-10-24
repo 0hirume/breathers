@@ -1,6 +1,12 @@
 name: assets
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/assets.yml
+      - scripts/assets.nu
   workflow_call:
     inputs:
       tag:
