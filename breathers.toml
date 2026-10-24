@@ -1,3 +1,3 @@
-#:schema https://raw.githubusercontent.com/0hirume/breathers/main/schema.json
+#:schema https://0hirume.github.io/breathers/schema.json
 
 exclude = ["fixtures"]

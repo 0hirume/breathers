@@ -1,0 +1,59 @@
+name: assets
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  queue: max
+
+jobs:
+  assets:
+    name: generate schema
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    steps:
+      - name: check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: set up nushell
+        uses: hustcer/setup-nu@eacad52a4634c4f8d17a94916f93be6856861b9c
+        with:
+          check-latest: true
+
+      - name: generate schema
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: nu scripts/assets.nu
+
+      - name: upload pages
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9
+        with:
+          path: target/pages
+
+  deploy:
+    name: deploy schema
+    needs: assets
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: deploy pages
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346
+        id: deployment

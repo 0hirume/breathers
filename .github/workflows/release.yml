@@ -123,3 +123,13 @@ jobs:
 
       - name: publish release
         run: nu scripts/release.nu publish
+
+  assets:
+    needs: publish
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/assets.yml
+    with:
+      tag: ${{ github.ref_name }}
