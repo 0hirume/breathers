@@ -1,6 +1,7 @@
 use std::collections::BTreeSet;
 
 use miette::LabeledSpan;
+
 use vermis::{
     token::TokenKind,
     tree::{NodeIndex, NodeKind, Tree},

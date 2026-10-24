@@ -1,6 +1,7 @@
 use std::{collections::BTreeSet, iter};
 
 use miette::LabeledSpan;
+
 use ra_ap_syntax::{
     AstNode as _, Edition, NodeOrToken, SourceFile, SyntaxKind, SyntaxNode, SyntaxToken,
     ast::{self, HasName as _},
