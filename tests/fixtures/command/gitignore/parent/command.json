@@ -1,0 +1,23 @@
+{
+  "files": {
+    ".gitignore": "rules.gitignore",
+    "project/ignored.luau": "../../data/input.luau",
+    "project/main.luau": "../../data/input.luau"
+  },
+  "steps": [
+    {
+      "arguments": ["project"],
+      "success": true,
+      "files": {
+        "project/ignored.luau": "../../data/input.luau",
+        "project/main.luau": "../../data/output.luau"
+      }
+    },
+    {
+      "directory": "project",
+      "arguments": [],
+      "success": true,
+      "files": {"project/ignored.luau": "../../data/input.luau"}
+    }
+  ]
+}

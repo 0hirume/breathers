@@ -1,0 +1,8 @@
+[
+  {
+    "language": "lua",
+    "input": "input.lua",
+    "output": "output.lua",
+    "success": false
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "language": "c++",
+    "input": "input.cpp",
+    "output": "output.cpp",
+    "success": true,
+    "configuration": "configuration1.toml"
+  }
+]

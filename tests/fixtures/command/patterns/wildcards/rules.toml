@@ -1,0 +1,1 @@
+exclude = ["hide?.luau", "range[0-2].luau", "single/*.luau", "any/**/hidden.luau", "deep/**", "**/every.luau"]

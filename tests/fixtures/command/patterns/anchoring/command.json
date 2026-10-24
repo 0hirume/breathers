@@ -1,0 +1,25 @@
+{
+  "files": {
+    "nested/rooted/main.luau": "../../data/input.luau",
+    "nested/path/selected.luau": "../../data/input.luau",
+    "nested/only.luau": "../../data/input.luau",
+    "rooted/main.luau": "../../data/input.luau",
+    "path/selected.luau": "../../data/input.luau",
+    "only.luau": "../../data/input.luau",
+    "breathers.toml": "rules.toml"
+  },
+  "steps": [
+    {
+      "arguments": [],
+      "success": true,
+      "files": {
+        "nested/rooted/main.luau": "../../data/output.luau",
+        "nested/path/selected.luau": "../../data/output.luau",
+        "nested/only.luau": "../../data/output.luau",
+        "rooted/main.luau": "../../data/input.luau",
+        "path/selected.luau": "../../data/input.luau",
+        "only.luau": "../../data/input.luau"
+      }
+    }
+  ]
+}

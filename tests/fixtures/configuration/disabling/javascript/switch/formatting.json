@@ -1,0 +1,9 @@
+[
+  {
+    "language": "javascript",
+    "input": "before.js",
+    "output": "before.js",
+    "success": true,
+    "configuration": "configuration1.toml"
+  }
+]

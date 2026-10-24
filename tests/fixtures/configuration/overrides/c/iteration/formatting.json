@@ -1,0 +1,29 @@
+[
+  {
+    "language": "c",
+    "input": "before.c",
+    "output": "after.c",
+    "success": true
+  },
+  {
+    "language": "c",
+    "input": "before.c",
+    "output": "before.c",
+    "success": true,
+    "configuration": "configuration2.toml"
+  },
+  {
+    "language": "c",
+    "input": "before.c",
+    "output": "after.c",
+    "success": true,
+    "configuration": "configuration3.toml"
+  },
+  {
+    "language": "c",
+    "input": "before.c",
+    "output": "before.c",
+    "success": true,
+    "configuration": "configuration4.toml"
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "files": {
+    "breathers.toml": "../../data/disabled.toml",
+    "main.luau": "../../data/input.luau",
+    "project/breathers.toml": "../../data/enabled.toml",
+    "project/main.luau": "../../data/input.luau",
+    "project/nested/breathers.toml": "../../data/disabled.toml",
+    "project/nested/main.luau": "../../data/input.luau"
+  },
+  "steps": [
+    {
+      "arguments": [],
+      "success": true,
+      "files": {
+        "main.luau": "../../data/input.luau",
+        "project/main.luau": "../../data/output.luau",
+        "project/nested/main.luau": "../../data/input.luau"
+      }
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "files": {
+    "untouched.luau": "../data/input.luau",
+    "breathers.toml": "../data/related.toml"
+  },
+  "steps": [
+    {
+      "arguments": [
+        "-l",
+        "luau",
+        "-"
+      ],
+      "success": true,
+      "files": {
+        "untouched.luau": "../data/input.luau"
+      },
+      "input": "../data/input.luau",
+      "stdout": "../data/input.luau"
+    }
+  ]
+}

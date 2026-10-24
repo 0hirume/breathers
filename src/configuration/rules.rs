@@ -135,30 +135,3 @@ impl Rules {
         })
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::configuration::Configuration;
-
-    use super::Rule;
-
-    #[test]
-    fn granular_keys_are_language_specific_and_preserve_group_defaults() {
-        for source in [
-            "[python]\nmatch_arms = false",
-            "[lua]\ninterface_members = true",
-            "[javascript]\ntype_aliases = false",
-            "[rust]\ndecorated_functions = true",
-        ] {
-            assert!(toml::from_str::<Configuration>(source).is_err());
-        }
-
-        let configuration: Configuration =
-            toml::from_str("[rust]\nreturns = false\ntail_expressions = true\n").unwrap();
-
-        assert!(!configuration.rust.enabled(Rule::ReturnStatements));
-        assert!(configuration.rust.enabled(Rule::TailExpressions));
-        assert!(configuration.rust.enabled(Rule::Blocks));
-        assert!(configuration.python.enabled(Rule::ReturnStatements));
-    }
-}

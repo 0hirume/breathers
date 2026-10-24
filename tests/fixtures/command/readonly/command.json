@@ -1,0 +1,20 @@
+{
+  "files": {
+    "first.luau": "../data/input.luau",
+    "second.luau": "../data/input.luau",
+    "third.luau": "../data/input.luau"
+  },
+  "steps": [
+    {
+      "arguments": [],
+      "success": false,
+      "files": {
+        "first.luau": "../data/output.luau",
+        "second.luau": "../data/input.luau",
+        "third.luau": "../data/input.luau"
+      },
+      "readonly": "second.luau",
+      "stderr": "../data/partial.json"
+    }
+  ]
+}

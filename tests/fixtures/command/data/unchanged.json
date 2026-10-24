@@ -1,0 +1,13 @@
+{
+  "contains": [
+    "2 processed \u00b7 0 changed \u00b7 2 unchanged \u00b7 0 failed \u00b7 "
+  ],
+  "excludes": [
+    "\u001b",
+    "Formatted",
+    "Unchanged",
+    "Checking",
+    "Scanning",
+    "Writing"
+  ]
+}

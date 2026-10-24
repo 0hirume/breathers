@@ -1,0 +1,21 @@
+{
+  "files": {
+    ".application/breathers/config.toml": "../data/disabled.toml",
+    ".configuration/breathers/config.toml": "../data/disabled.toml",
+    ".home/Library/Application Support/breathers/config.toml": "../data/disabled.toml",
+    "breathers.toml": "../data/enabled.toml"
+  },
+  "steps": [
+    {
+      "arguments": [
+        "-l",
+        "luau",
+        "-"
+      ],
+      "success": true,
+      "files": {},
+      "input": "../data/input.luau",
+      "stdout": "../data/output.luau"
+    }
+  ]
+}

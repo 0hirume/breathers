@@ -1,9 +1,11 @@
 use std::{collections::BTreeSet, ops::Range};
 
+use miette::LabeledSpan;
 use tree_sitter::{Language, Node, Parser, Tree};
 
 use crate::{
     configuration::{Rule, Rules},
+    error::Failure,
     spacing,
 };
 
@@ -30,7 +32,7 @@ pub(crate) fn breathe(
     rules: &Rules,
     policy: &Policy,
     protected: &[Range<usize>],
-) -> Result<String, String> {
+) -> Result<String, Failure> {
     let mut parser = Parser::new();
 
     parser
@@ -48,9 +50,12 @@ pub(crate) fn format(
     rules: &Rules,
     policy: &Policy,
     protected: &[Range<usize>],
-) -> Result<String, String> {
+) -> Result<String, Failure> {
     if tree.root_node().has_error() {
-        return Err("Syntax errors; no changes written".into());
+        let mut labels = Vec::new();
+        errors(tree.root_node(), &mut labels);
+
+        return Err(Failure::syntax(source, labels));
     }
 
     let mut insertions = BTreeSet::new();
@@ -65,6 +70,30 @@ pub(crate) fn format(
     );
 
     Ok(spacing::apply(source, insertions))
+}
+
+fn errors(node: Node<'_>, labels: &mut Vec<LabeledSpan>) {
+    if node.is_error() || node.is_missing() {
+        labels.push(LabeledSpan::new_with_span(
+            Some(if node.is_missing() {
+                format!("Missing {}", node.kind())
+            } else {
+                "Invalid syntax".to_owned()
+            }),
+            node.byte_range(),
+        ));
+
+        return;
+    }
+
+    let mut cursor = node.walk();
+
+    for child in node
+        .children(&mut cursor)
+        .filter(|child| child.has_error() || child.is_missing())
+    {
+        errors(child, labels);
+    }
 }
 
 pub(crate) fn rule(

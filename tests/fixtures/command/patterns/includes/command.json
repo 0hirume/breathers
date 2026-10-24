@@ -1,0 +1,91 @@
+{
+  "files": {
+    "selected/main.luau": "../../data/input.luau",
+    "literal.luau": "../../data/input.luau",
+    "selected/blocked/main.luau": "../../data/input.luau",
+    "selected/file": "../../data/input.luau",
+    "outside/file": "../../data/input.luau",
+    "only.luau": "../../data/input.luau",
+    "nested/only.luau": "../../data/input.luau",
+    "skip.luau": "../../data/input.luau",
+    "always.luau": "../../data/input.luau",
+    "breathers.toml": "rules.toml"
+  },
+  "steps": [
+    {
+      "arguments": [],
+      "success": true,
+      "files": {
+        "selected/main.luau": "../../data/output.luau",
+        "literal.luau": "../../data/output.luau",
+        "selected/blocked/main.luau": "../../data/input.luau",
+        "selected/file": "../../data/input.luau",
+        "outside/file": "../../data/input.luau",
+        "only.luau": "../../data/input.luau",
+        "nested/only.luau": "../../data/input.luau",
+        "skip.luau": "../../data/input.luau",
+        "always.luau": "../../data/input.luau"
+      }
+    },
+    {
+      "arguments": [
+        "-l",
+        "luau",
+        "selected/file",
+        "outside/file"
+      ],
+      "success": true,
+      "files": {
+        "selected/main.luau": "../../data/output.luau",
+        "literal.luau": "../../data/output.luau",
+        "selected/blocked/main.luau": "../../data/input.luau",
+        "selected/file": "../../data/output.luau",
+        "outside/file": "../../data/input.luau",
+        "only.luau": "../../data/input.luau",
+        "nested/only.luau": "../../data/input.luau",
+        "skip.luau": "../../data/input.luau",
+        "always.luau": "../../data/input.luau"
+      }
+    },
+    {
+      "arguments": [
+        "-i",
+        "/only.luau",
+        "."
+      ],
+      "success": true,
+      "files": {
+        "selected/main.luau": "../../data/output.luau",
+        "literal.luau": "../../data/output.luau",
+        "selected/blocked/main.luau": "../../data/input.luau",
+        "selected/file": "../../data/output.luau",
+        "outside/file": "../../data/input.luau",
+        "only.luau": "../../data/output.luau",
+        "nested/only.luau": "../../data/input.luau",
+        "skip.luau": "../../data/input.luau",
+        "always.luau": "../../data/input.luau"
+      }
+    },
+    {
+      "arguments": [
+        "-i",
+        "*.luau",
+        "-i",
+        "!skip.luau",
+        "."
+      ],
+      "success": true,
+      "files": {
+        "selected/main.luau": "../../data/output.luau",
+        "literal.luau": "../../data/output.luau",
+        "selected/blocked/main.luau": "../../data/output.luau",
+        "selected/file": "../../data/output.luau",
+        "outside/file": "../../data/input.luau",
+        "only.luau": "../../data/output.luau",
+        "nested/only.luau": "../../data/output.luau",
+        "skip.luau": "../../data/input.luau",
+        "always.luau": "../../data/input.luau"
+      }
+    }
+  ]
+}

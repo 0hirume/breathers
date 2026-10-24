@@ -1,0 +1,12 @@
+{
+  "contains": [
+    "Formatted  first.luau",
+    "second.luau",
+    "3 processed \u00b7 1 changed \u00b7 0 unchanged \u00b7 1 failed \u00b7 ",
+    "1 prepared changes not written"
+  ],
+  "excludes": [
+    "Formatted  second.luau",
+    "Formatted  third.luau"
+  ]
+}

@@ -1,0 +1,8 @@
+[
+  {
+    "language": "powershell",
+    "input": "input.ps1",
+    "output": "output.ps1",
+    "success": true
+  }
+]

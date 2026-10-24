@@ -1,0 +1,1 @@
+exclude = ["", "#comment.luau", "\\#literal.luau", "\\!literal.luau", "trimmed.luau   ", "space\\ .luau", "bracket[.luau"]

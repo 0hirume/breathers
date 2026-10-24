@@ -1,0 +1,8 @@
+[
+  {
+    "language": "c",
+    "input": "input.c",
+    "output": "output.c",
+    "success": false
+  }
+]

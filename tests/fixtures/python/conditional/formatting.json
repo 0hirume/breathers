@@ -1,0 +1,9 @@
+[
+  {
+    "language": "python",
+    "input": "input.py",
+    "output": "output.py",
+    "success": true,
+    "configuration": "configuration1.toml"
+  }
+]

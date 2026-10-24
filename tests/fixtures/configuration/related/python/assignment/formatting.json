@@ -1,0 +1,22 @@
+[
+  {
+    "language": "python",
+    "input": "before.py",
+    "output": "default.py",
+    "success": true
+  },
+  {
+    "language": "python",
+    "input": "before.py",
+    "output": "after.py",
+    "success": true,
+    "configuration": "configuration2.toml"
+  },
+  {
+    "language": "python",
+    "input": "default.py",
+    "output": "default.py",
+    "success": true,
+    "configuration": "configuration3.toml"
+  }
+]

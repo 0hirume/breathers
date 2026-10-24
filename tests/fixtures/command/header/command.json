@@ -1,0 +1,16 @@
+{
+  "files": {
+    "source.h": "../../cplusplus/command/template/input.cpp"
+  },
+  "steps": [
+    {
+      "arguments": [
+        "source.h"
+      ],
+      "success": false,
+      "files": {
+        "source.h": "../../cplusplus/command/template/input.cpp"
+      }
+    }
+  ]
+}

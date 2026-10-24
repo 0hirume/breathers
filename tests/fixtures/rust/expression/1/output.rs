@@ -1,0 +1,3 @@
+fn example() {
+    return result;
+}

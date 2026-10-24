@@ -2,6 +2,7 @@
 
 mod command;
 mod configuration;
+mod error;
 mod languages;
 mod spacing;
 mod syntax;

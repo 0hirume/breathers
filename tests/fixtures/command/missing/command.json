@@ -1,0 +1,17 @@
+{
+  "files": {
+    "untouched.luau": "../data/input.luau"
+  },
+  "steps": [
+    {
+      "arguments": [
+        "--config",
+        "missing.toml"
+      ],
+      "success": false,
+      "files": {
+        "untouched.luau": "../data/input.luau"
+      }
+    }
+  ]
+}

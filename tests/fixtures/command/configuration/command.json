@@ -1,0 +1,24 @@
+{
+  "files": {
+    "untouched.luau": "../data/input.luau",
+    "breathers.toml": "../data/exclude.toml",
+    "settings.toml": "../data/disabled.toml"
+  },
+  "steps": [
+    {
+      "arguments": [
+        "--language",
+        "luau",
+        "--config",
+        "settings.toml",
+        "-"
+      ],
+      "success": true,
+      "files": {
+        "untouched.luau": "../data/input.luau"
+      },
+      "input": "../data/input.luau",
+      "stdout": "../data/input.luau"
+    }
+  ]
+}

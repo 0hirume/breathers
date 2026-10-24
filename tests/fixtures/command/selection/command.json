@@ -1,0 +1,15 @@
+{
+  "files": {
+    "changed.luau": "../data/input.luau",
+    "breathers.toml": "../data/selection.toml"
+  },
+  "steps": [
+    {
+      "arguments": [],
+      "success": true,
+      "files": {
+        "changed.luau": "../data/input.luau"
+      }
+    }
+  ]
+}

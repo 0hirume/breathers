@@ -1,0 +1,14 @@
+[
+  {
+    "language": "c",
+    "input": "input.c",
+    "output": "input.c",
+    "success": true
+  },
+  {
+    "language": "c++",
+    "input": "input.c",
+    "output": "input.c",
+    "success": true
+  }
+]

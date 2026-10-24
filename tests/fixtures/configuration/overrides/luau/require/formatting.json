@@ -1,0 +1,29 @@
+[
+  {
+    "language": "luau",
+    "input": "before.luau",
+    "output": "after.luau",
+    "success": true
+  },
+  {
+    "language": "luau",
+    "input": "before.luau",
+    "output": "before.luau",
+    "success": true,
+    "configuration": "configuration2.toml"
+  },
+  {
+    "language": "luau",
+    "input": "before.luau",
+    "output": "after.luau",
+    "success": true,
+    "configuration": "configuration3.toml"
+  },
+  {
+    "language": "luau",
+    "input": "before.luau",
+    "output": "before.luau",
+    "success": true,
+    "configuration": "configuration4.toml"
+  }
+]

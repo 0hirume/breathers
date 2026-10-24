@@ -1,0 +1,20 @@
+{
+  "files": {
+    "bridge/source.cpp": "../../cplusplus/command/source/input.cpp"
+  },
+  "steps": [
+    {
+      "arguments": [
+        "--stdin-filepath",
+        "bridge/source.cpp",
+        "-"
+      ],
+      "success": true,
+      "files": {
+        "bridge/source.cpp": "../../cplusplus/command/source/input.cpp"
+      },
+      "input": "../data/buffer.cpp",
+      "stdout": "../../cplusplus/command/source/buffer.cpp"
+    }
+  ]
+}

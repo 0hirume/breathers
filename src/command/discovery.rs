@@ -1,177 +1,150 @@
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet, btree_map::Entry},
     fs,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
-use crate::{configuration::Selection, languages::Language};
+use ignore::{IncrementalIgnore, WalkBuilder};
 
-pub(super) fn collect(
-    path: &Path,
-    files: &mut BTreeSet<PathBuf>,
-    directories: &mut BTreeSet<PathBuf>,
-    selection: &Selection,
-) -> Result<(), String> {
-    let canonical =
-        fs::canonicalize(path).map_err(|error| format!("{}: {error}", path.display()))?;
+use crate::{error::Failure, languages::Language};
 
-    let metadata =
-        fs::metadata(&canonical).map_err(|error| format!("{}: {error}", path.display()))?;
+use super::{arguments::Arguments, settings::Settings};
 
-    if metadata.is_dir() {
-        if canonical.file_name().is_some_and(|name| {
-            matches!(
-                name.to_str(),
-                Some(".git" | "target" | ".venv" | "node_modules")
-            )
-        }) || selection.excluded_directory(&canonical)
-            || !directories.insert(canonical.clone())
+struct Discovery<'arguments> {
+    arguments: &'arguments Arguments,
+    files: BTreeMap<PathBuf, Arc<Settings>>,
+    directories: BTreeSet<PathBuf>,
+    settings: BTreeMap<PathBuf, Arc<Settings>>,
+}
+
+impl Discovery<'_> {
+    fn collect(&mut self, path: &Path, ignores: &mut IncrementalIgnore) -> Result<(), Failure> {
+        let metadata = fs::metadata(path)
+            .map_err(|error| Failure::from(error).context(&path.display().to_string()))?;
+
+        if !metadata.is_dir() && !metadata.is_file() {
+            return Err(format!("{}: expected a file or directory", path.display()).into());
+        }
+
+        if metadata.is_dir()
+            && path.file_name().is_some_and(|name| {
+                matches!(
+                    name.to_str(),
+                    Some(".git" | "target" | ".venv" | "node_modules")
+                )
+            })
         {
             return Ok(());
         }
 
-        for entry in
-            fs::read_dir(&canonical).map_err(|error| format!("{}: {error}", path.display()))?
-        {
-            let entry = entry.map_err(|error| format!("{}: {error}", path.display()))?;
+        let relative = path
+            .strip_prefix(ignores.root())
+            .map_err(|error| Failure::from(error.to_string()))?;
 
-            let kind = entry
-                .file_type()
-                .map_err(|error| format!("{}: {error}", entry.path().display()))?;
+        let (matched, error) = ignores.matched_with_errors(relative, metadata.is_dir());
 
-            if kind.is_symlink() {
-                continue;
+        if let Some(error) = error {
+            return Err(Failure::from(error.to_string()).context(&path.display().to_string()));
+        }
+
+        if matched.is_ignore() {
+            return Ok(());
+        }
+
+        let directory = if metadata.is_dir() {
+            path
+        } else {
+            path.parent().ok_or("Source file has no parent directory")?
+        };
+
+        let settings = self.settings(directory)?;
+
+        if metadata.is_dir() {
+            if settings.selection.excluded(path, true)
+                || !self.directories.insert(path.to_path_buf())
+            {
+                return Ok(());
             }
 
-            if kind.is_dir() || (kind.is_file() && Language::infer(&entry.path()).is_some()) {
-                collect(&entry.path(), files, directories, selection)?;
+            for entry in fs::read_dir(path)
+                .map_err(|error| Failure::from(error).context(&path.display().to_string()))?
+            {
+                let entry = entry
+                    .map_err(|error| Failure::from(error).context(&path.display().to_string()))?;
+
+                let kind = entry.file_type().map_err(|error| {
+                    Failure::from(error).context(&entry.path().display().to_string())
+                })?;
+
+                if kind.is_symlink() {
+                    continue;
+                }
+
+                if (kind.is_dir() && !settings.selection.excluded(&entry.path(), true))
+                    || (kind.is_file() && Language::infer(&entry.path()).is_some())
+                {
+                    self.collect(&entry.path(), ignores)?;
+                }
             }
+        } else if settings.selection.includes(path) {
+            self.files.insert(path.to_path_buf(), settings);
         }
-    } else if metadata.is_file() {
-        if selection.includes(&canonical) {
-            files.insert(canonical);
-        }
-    } else {
-        return Err(format!("{}: expected a file or directory", path.display()));
+
+        Ok(())
     }
 
-    Ok(())
+    fn settings(&mut self, directory: &Path) -> Result<Arc<Settings>, Failure> {
+        Ok(match self.settings.entry(directory.to_path_buf()) {
+            Entry::Occupied(entry) => Arc::clone(entry.get()),
+
+            Entry::Vacant(entry) => {
+                Arc::clone(entry.insert(Arc::new(Settings::load(self.arguments, directory)?)))
+            }
+        })
+    }
 }
 
-#[cfg(test)]
-mod tests {
-    use std::{
-        collections::BTreeSet,
-        env, fs, process,
-        time::{SystemTime, UNIX_EPOCH},
+pub(super) fn collect(arguments: &Arguments) -> Result<BTreeMap<PathBuf, Arc<Settings>>, Failure> {
+    let mut discovery = Discovery {
+        arguments,
+        files: BTreeMap::new(),
+        directories: BTreeSet::new(),
+        settings: BTreeMap::new(),
     };
 
-    use crate::configuration::{Configuration, Selection};
+    for path in &arguments.paths {
+        let canonical = fs::canonicalize(path)
+            .map_err(|error| Failure::from(error).context(&path.display().to_string()))?;
 
-    use super::collect;
+        let directory = if canonical.is_dir() {
+            canonical.as_path()
+        } else {
+            canonical
+                .parent()
+                .ok_or("Source file has no parent directory")?
+        };
 
-    #[test]
-    fn discovers_source_files_and_deduplicates_paths() {
-        let root = env::temp_dir().join(format!(
-            "breathers-{}-{}",
-            process::id(),
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
+        discovery.settings(directory)?;
 
-        fs::create_dir(&root).unwrap();
+        let root = if canonical.is_dir() {
+            canonical.parent().unwrap_or(&canonical)
+        } else {
+            &canonical
+        };
 
-        for directory in [
-            "src",
-            "src/nested",
-            "target",
-            ".venv",
-            "node_modules",
-            "src/nested/target",
-            ".git",
-        ] {
-            fs::create_dir(root.join(directory)).unwrap();
-        }
+        let mut ignores = WalkBuilder::new(root)
+            .hidden(false)
+            .ignore(false)
+            .git_global(false)
+            .git_exclude(false)
+            .require_git(false)
+            .build_matchers()
+            .pop()
+            .ok_or("Missing Git ignore matcher")?;
 
-        for file in [
-            "root.rs",
-            "src/main.rs",
-            "src/nested/module.rs",
-            "src/main.c",
-            "src/header.h",
-            "src/main.cpp",
-            "src/header.hpp",
-            "src/notes.txt",
-            "target/generated.rs",
-            ".venv/generated.py",
-            "node_modules/generated.js",
-            "src/nested/target/generated.rs",
-            ".git/ignored.rs",
-        ] {
-            fs::write(root.join(file), "fn example() {}\n").unwrap();
-        }
-
-        let expected: BTreeSet<_> = [
-            "root.rs",
-            "src/main.rs",
-            "src/nested/module.rs",
-            "src/main.c",
-            "src/header.h",
-            "src/main.cpp",
-            "src/header.hpp",
-        ]
-        .map(|path| fs::canonicalize(root.join(path)).unwrap())
-        .into_iter()
-        .collect();
-
-        let mut files = BTreeSet::new();
-        let mut directories = BTreeSet::new();
-
-        let selection = Selection::new(&Configuration::default(), root.clone()).unwrap();
-
-        collect(&root, &mut files, &mut directories, &selection).unwrap();
-        collect(&root.join("src"), &mut files, &mut directories, &selection).unwrap();
-
-        collect(
-            &root.join("src/main.rs"),
-            &mut files,
-            &mut directories,
-            &selection,
-        )
-        .unwrap();
-
-        assert_eq!(files, expected);
-        files.clear();
-        directories.clear();
-        collect(&root.join("src"), &mut files, &mut directories, &selection).unwrap();
-        assert_eq!(files.len(), 6);
-        files.clear();
-
-        collect(
-            &root.join("src/main.rs"),
-            &mut files,
-            &mut directories,
-            &selection,
-        )
-        .unwrap();
-
-        assert_eq!(
-            files,
-            BTreeSet::from([fs::canonicalize(root.join("src/main.rs")).unwrap()])
-        );
-
-        assert!(
-            collect(
-                &root.join("missing"),
-                &mut files,
-                &mut directories,
-                &selection
-            )
-            .is_err()
-        );
-
-        fs::remove_dir_all(root).unwrap();
+        discovery.collect(&canonical, &mut ignores)?;
     }
+
+    Ok(discovery.files)
 }

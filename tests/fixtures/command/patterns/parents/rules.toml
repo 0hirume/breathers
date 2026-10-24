@@ -1,0 +1,1 @@
+exclude = ["blocked/", "!blocked/keep.luau", "open/*", "!open/keep.luau", "tree/**", "!tree/", "!tree/nested/", "!tree/nested/keep.luau"]

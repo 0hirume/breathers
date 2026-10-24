@@ -1,0 +1,2 @@
+include = ["selected/", "!selected/blocked/", "literal.luau", "!literal.luau", "literal.luau"]
+exclude = ["always.luau"]

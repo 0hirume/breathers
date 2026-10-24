@@ -1,0 +1,18 @@
+{
+  "files": {
+    "nested/example.ps1": "../data/input.ps1",
+    "nested/module.psm1": "../data/input.ps1",
+    "nested/manifest.psd1": "../data/input.ps1"
+  },
+  "steps": [
+    {
+      "arguments": [],
+      "success": true,
+      "files": {
+        "nested/example.ps1": "../data/output.ps1",
+        "nested/module.psm1": "../data/output.ps1",
+        "nested/manifest.psd1": "../data/output.ps1"
+      }
+    }
+  ]
+}

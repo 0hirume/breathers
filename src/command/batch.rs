@@ -1,53 +1,45 @@
 use std::{
-    collections::BTreeSet,
+    collections::BTreeMap,
     env, fs,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use rayon::iter::{IntoParallelIterator as _, ParallelIterator as _};
 
-use crate::{configuration, languages::Language};
+use crate::{error::Failure, languages::Language};
 
 use super::{
     arguments::Arguments,
     discovery::collect,
     preview::diff,
     reporting::{Reporting, Status, stdout},
+    settings::Settings,
+    writing,
 };
 
-pub(super) fn batch(
-    arguments: &Arguments,
-    configuration: &configuration::Configuration,
-    selection: &configuration::Selection,
-    reporting: &mut Reporting,
-) -> Result<(), String> {
+pub(super) fn batch(arguments: &Arguments, reporting: &mut Reporting) -> Result<(), Failure> {
     let directory = env::current_dir()
         .and_then(fs::canonicalize)
-        .map_err(|error| error.to_string())?;
+        .map_err(Failure::from)?;
 
     reporting.progress("Scanning files...")?;
 
-    let mut files = BTreeSet::new();
-    let mut directories = BTreeSet::new();
-
-    for path in &arguments.paths {
-        collect(path, &mut files, &mut directories, selection)?;
-    }
+    let files = collect(arguments)?;
 
     if arguments.formatting.source && files.len() != 1 {
         return Err("--source requires exactly one selected file".into());
     }
 
-    process(files, arguments, configuration, reporting, &directory)
+    process(files, arguments, reporting, &directory)
 }
 
 fn process(
-    files: BTreeSet<PathBuf>,
+    files: BTreeMap<PathBuf, Arc<Settings>>,
     arguments: &Arguments,
-    configuration: &configuration::Configuration,
     reporting: &mut Reporting,
     directory: &Path,
-) -> Result<(), String> {
+) -> Result<(), Failure> {
     let total = files.len();
 
     let writing = !arguments.formatting.check
@@ -62,16 +54,16 @@ fn process(
         .into_iter()
         .collect::<Vec<_>>()
         .into_par_iter()
-        .map(|path| {
+        .map(|(path, settings)| {
             let result = fs::read_to_string(&path)
-                .map_err(|error| error.to_string())
+                .map_err(Failure::from)
                 .and_then(|source| {
                     let language = arguments
                         .language
                         .or_else(|| Language::infer(&path))
                         .ok_or("Unknown language; specify --language (-l)")?;
 
-                    let output = language.format(&source, configuration);
+                    let output = language.format(&source, &settings.configuration);
 
                     Ok((source, output))
                 });
@@ -93,16 +85,13 @@ fn process(
         ))?;
 
         let index = reporting.record(name.clone(), Status::Failed);
-        let (source, output) = result.map_err(|error| format!("{name}\n  {error}"))?;
+        let (source, output) = result.map_err(|error| error.context(&name))?;
 
         let output = match output {
             Ok(output) => output,
 
             Err(error) => {
-                reporting.error(format!(
-                    "{name} (skipped)\n  {}",
-                    error.replace('\n', "\n  "),
-                ));
+                reporting.error(&error.context(&name));
 
                 continue;
             }
@@ -112,7 +101,7 @@ fn process(
             reporting.files[index].status = Status::Unchanged;
 
             if arguments.formatting.source {
-                changes.push((path, index, output));
+                changes.push((path, index, source, output));
             } else {
                 reporting.success(index)?;
             }
@@ -127,13 +116,13 @@ fn process(
                 reporting.files[index].diff = Some(diff(&name, &source, &output));
             }
 
-            changes.push((path, index, output));
+            changes.push((path, index, source, output));
         }
     }
 
     let total = changes.len();
 
-    for (position, (path, index, output)) in changes.into_iter().enumerate() {
+    for (position, (path, index, source, output)) in changes.into_iter().enumerate() {
         if writing {
             reporting.progress(&format!(
                 "Writing {}/{total}  {}",
@@ -141,10 +130,10 @@ fn process(
                 reporting.files[index].path,
             ))?;
 
-            if let Err(error) = fs::write(&path, output) {
+            if let Err(error) = writing::replace(&path, &source, &output) {
                 reporting.files[index].status = Status::Failed;
 
-                return Err(format!("{}\n  {error}", reporting.files[index].path));
+                return Err(Failure::from(error).context(&reporting.files[index].path));
             }
 
             reporting.files[index].status = Status::Formatted;

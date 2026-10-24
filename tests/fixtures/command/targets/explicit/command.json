@@ -1,0 +1,39 @@
+{
+  "files": {
+    "caller/breathers.toml": "../../data/invalid1.toml",
+    "caller/enabled.toml": "../../data/enabled.toml",
+    "caller/disabled.toml": "../../data/disabled.toml",
+    "project/breathers.toml": "../../data/invalid1.toml",
+    "project/main.luau": "../../data/input.luau"
+  },
+  "steps": [
+    {
+      "directory": "caller",
+      "arguments": ["-c", "disabled.toml", "--source", "../project/main.luau"],
+      "success": true,
+      "stdout": "../../data/input.luau",
+      "files": {"project/main.luau": "../../data/input.luau"}
+    },
+    {
+      "directory": "caller",
+      "arguments": ["-c", "enabled.toml", "--source", "../project/main.luau"],
+      "success": true,
+      "stdout": "../../data/output.luau",
+      "files": {"project/main.luau": "../../data/input.luau"}
+    },
+    {
+      "directory": "caller",
+      "arguments": ["-c", "disabled.toml", "-f", "../project/unsaved.luau", "-"],
+      "input": "../../data/input.luau",
+      "success": true,
+      "stdout": "../../data/input.luau",
+      "files": {"project/main.luau": "../../data/input.luau"}
+    },
+    {
+      "directory": "caller",
+      "arguments": ["-c", "enabled.toml", "../project"],
+      "success": true,
+      "files": {"project/main.luau": "../../data/output.luau"}
+    }
+  ]
+}

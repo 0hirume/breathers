@@ -1,0 +1,8 @@
+[
+  {
+    "language": "c++",
+    "input": "input.cpp",
+    "output": "output.cpp",
+    "success": true
+  }
+]

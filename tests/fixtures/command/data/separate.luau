@@ -1,0 +1,2 @@
+work()
+return 1

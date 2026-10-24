@@ -14,12 +14,12 @@ use super::schema::{
 #[schemars(description = "Source spacing configuration. Project keys override matching global keys; omitted keys inherit global settings, then built-in defaults.", transform = document)]
 pub(crate) struct Configuration {
     #[schemars(
-        description = "Include files matching these globs, relative to the project configuration directory or current working directory. Default: inherit the global list, otherwise select all eligible files. An empty list selects none. Exclusions win."
+        description = "Select files using ordered Git-ignore-style patterns rooted at the project configuration directory, or the working directory when no project configuration exists. Bare names match at any depth; leading / anchors to the root; trailing / matches directories. Positive patterns select files and directory contents; ! removes them from selection. Default: inherit the global list, otherwise select all eligible files. An empty list selects none. Exclusions win."
     )]
     pub(crate) include: Option<Vec<String>>,
 
     #[schemars(
-        description = "Exclude files and directories matching these globs, using the same root as include. Default: inherit the global list, otherwise add no exclusions. An empty list clears inherited exclusions; directory searches still skip .git, target, .venv, node_modules, and symbolic links."
+        description = "Exclude files and directories using ordered Git-ignore-style patterns, with the same root as include. Bare names match at any depth; leading / anchors to the root; trailing / matches directories. Later matching rules win; ! re-includes a path only when its parent directories are not excluded. Default: inherit the global list, otherwise add no exclusions. An empty list clears inherited exclusions; directory searches still skip .git, target, .venv, node_modules, and symbolic links."
     )]
     pub(crate) exclude: Option<Vec<String>>,
 
@@ -115,31 +115,5 @@ impl Configuration {
         self.python.0.extend(project.python.0);
         self.javascript.0.extend(project.javascript.0);
         self.typescript.0.extend(project.typescript.0);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::Configuration;
-    use crate::configuration::Rule;
-
-    #[test]
-    fn resolves_partial_toggles_and_rejects_invalid_configuration() {
-        let configuration: Configuration =
-            toml::from_str("[rust]\nreturns = false\n[python]\nblocks = false\n").unwrap();
-
-        assert!(!configuration.rust.enabled(Rule::Returns));
-        assert!(configuration.rust.enabled(Rule::Blocks));
-        assert!(!configuration.python.enabled(Rule::Blocks));
-        assert!(configuration.javascript.enabled(Rule::Returns));
-
-        for source in [
-            "[rust]\nunknown = false",
-            "[unknown]\nreturns = false",
-            "[rust]\nreturns = 1",
-            "[rust]\nreturns = 'false'",
-        ] {
-            assert!(toml::from_str::<Configuration>(source).is_err());
-        }
     }
 }

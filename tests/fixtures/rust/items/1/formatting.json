@@ -1,0 +1,15 @@
+[
+  {
+    "language": "rust",
+    "input": "input.rs",
+    "output": "output.rs",
+    "success": true
+  },
+  {
+    "language": "rust",
+    "input": "input.rs",
+    "output": "input.rs",
+    "success": true,
+    "configuration": "configuration2.toml"
+  }
+]

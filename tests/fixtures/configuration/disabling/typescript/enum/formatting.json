@@ -1,0 +1,9 @@
+[
+  {
+    "language": "typescript",
+    "input": "before.ts",
+    "output": "before.ts",
+    "success": true,
+    "configuration": "configuration1.toml"
+  }
+]

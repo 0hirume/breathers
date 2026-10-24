@@ -1,0 +1,22 @@
+{
+  "contains": [
+    "Scanning files...",
+    "Checking 1/3",
+    "Checking 3/3",
+    "Unchanged  unchanged.lua",
+    "broken.rs",
+    "3 processed \u00b7 1 changed \u00b7 1 unchanged \u00b7 1 failed \u00b7 ",
+    " elapsed"
+  ],
+  "excludes": [
+    "\u001b",
+    "\r"
+  ],
+  "ordered": [
+    "Checking 1/3",
+    "broken.rs",
+    "Checking 2/3",
+    "Writing 1/1",
+    "Formatted  changed.luau"
+  ]
+}

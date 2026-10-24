@@ -1,0 +1,31 @@
+{
+  "files": {
+    "#comment.luau": "../../data/input.luau",
+    "ordinary.luau": "../../data/input.luau",
+    "#literal.luau": "../../data/input.luau",
+    "!literal.luau": "../../data/input.luau",
+    "trimmed.luau": "../../data/input.luau",
+    "nested/trimmed.luau": "../../data/input.luau",
+    "space .luau": "../../data/input.luau",
+    "nested/space .luau": "../../data/input.luau",
+    "bracket[.luau": "../../data/input.luau",
+    "breathers.toml": "rules.toml"
+  },
+  "steps": [
+    {
+      "arguments": [],
+      "success": true,
+      "files": {
+        "#comment.luau": "../../data/output.luau",
+        "ordinary.luau": "../../data/output.luau",
+        "#literal.luau": "../../data/input.luau",
+        "!literal.luau": "../../data/input.luau",
+        "trimmed.luau": "../../data/input.luau",
+        "nested/trimmed.luau": "../../data/input.luau",
+        "space .luau": "../../data/input.luau",
+        "nested/space .luau": "../../data/input.luau",
+        "bracket[.luau": "../../data/input.luau"
+      }
+    }
+  ]
+}

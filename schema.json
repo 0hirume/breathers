@@ -217,7 +217,7 @@
       "default": {}
     },
     "exclude": {
-      "description": "Exclude files and directories matching these globs, using the same root as include. Default: inherit the global list, otherwise add no exclusions. An empty list clears inherited exclusions; directory searches still skip .git, target, .venv, node_modules, and symbolic links.",
+      "description": "Exclude files and directories using ordered Git-ignore-style patterns, with the same root as include. Bare names match at any depth; leading / anchors to the root; trailing / matches directories. Later matching rules win; ! re-includes a path only when its parent directories are not excluded. Default: inherit the global list, otherwise add no exclusions. An empty list clears inherited exclusions; directory searches still skip .git, target, .venv, node_modules, and symbolic links.",
       "type": [
         "array",
         "null"
@@ -227,7 +227,7 @@
       }
     },
     "include": {
-      "description": "Include files matching these globs, relative to the project configuration directory or current working directory. Default: inherit the global list, otherwise select all eligible files. An empty list selects none. Exclusions win.",
+      "description": "Select files using ordered Git-ignore-style patterns rooted at the project configuration directory, or the working directory when no project configuration exists. Bare names match at any depth; leading / anchors to the root; trailing / matches directories. Positive patterns select files and directory contents; ! removes them from selection. Default: inherit the global list, otherwise select all eligible files. An empty list selects none. Exclusions win.",
       "type": [
         "array",
         "null"

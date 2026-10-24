@@ -1,0 +1,27 @@
+{
+  "files": {
+    "breathers.toml": "../../data/filter.toml",
+    "src/main.luau": "../../data/input.luau",
+    "src/standalone.luau": "../../data/separate.luau",
+    "src/generated/invalid.luau": "../../data/invalid.luau",
+    "src/omit.luau": "../../data/invalid.luau",
+    "src/other.lua": "../../data/invalid.luau"
+  },
+  "steps": [
+    {
+      "arguments": [
+        "main.luau"
+      ],
+      "success": true,
+      "files": {
+        "breathers.toml": "../../data/filter.toml",
+        "src/main.luau": "../../data/input.luau",
+        "src/standalone.luau": "../../data/separate.luau",
+        "src/generated/invalid.luau": "../../data/invalid.luau",
+        "src/omit.luau": "../../data/invalid.luau",
+        "src/other.lua": "../../data/invalid.luau"
+      },
+      "directory": "src"
+    }
+  ]
+}

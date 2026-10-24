@@ -1,0 +1,9 @@
+[
+  {
+    "language": "luau",
+    "input": "input.luau",
+    "output": "output.luau",
+    "success": true,
+    "configuration": "configuration1.toml"
+  }
+]

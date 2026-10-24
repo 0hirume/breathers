@@ -1,0 +1,25 @@
+{
+  "files": {
+    "example.py": "../data/input.py",
+    "example.nu": "../data/input.nu",
+    "example.js": "../data/input.js",
+    "example.jsx": "../data/input.jsx",
+    "example.ts": "../data/input.ts",
+    "example.tsx": "../data/input.tsx",
+    "breathers.toml": "../data/project.toml"
+  },
+  "steps": [
+    {
+      "arguments": [],
+      "success": true,
+      "files": {
+        "example.py": "../data/input.py",
+        "example.nu": "../data/input.nu",
+        "example.js": "../data/output.js",
+        "example.jsx": "../data/output.jsx",
+        "example.ts": "../data/input.ts",
+        "example.tsx": "../data/input.tsx"
+      }
+    }
+  ]
+}

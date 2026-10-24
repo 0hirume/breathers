@@ -1,0 +1,22 @@
+{
+  "files": {
+    "caller/breathers.toml": "../data/invalid1.toml",
+    "first/breathers.toml": "disabled.toml",
+    "first/src/main.luau": "../data/input.luau",
+    "second/breathers.toml": "../data/enabled.toml",
+    "second/src/main.luau": "../data/input.luau",
+    "second/src/excluded.luau": "../data/input.luau"
+  },
+  "steps": [
+    {
+      "directory": "caller",
+      "arguments": ["--include", "src/**", "--exclude", "src/excluded.luau", "../first/src", "../second/src/main.luau", "../second"],
+      "success": true,
+      "files": {
+        "first/src/main.luau": "../data/input.luau",
+        "second/src/main.luau": "../data/output.luau",
+        "second/src/excluded.luau": "../data/input.luau"
+      }
+    }
+  ]
+}

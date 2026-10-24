@@ -2,7 +2,7 @@ use std::path::Path;
 
 use clap::ValueEnum;
 
-use crate::configuration::Configuration;
+use crate::{configuration::Configuration, error::Failure};
 
 use super::{c, javascript, lua, luau, nushell, powershell, python, rust};
 
@@ -49,7 +49,7 @@ impl Language {
         self,
         source: &str,
         configuration: &Configuration,
-    ) -> Result<String, String> {
+    ) -> Result<String, Failure> {
         match self {
             Self::Rust => rust::breathe(source, &configuration.rust),
             Self::Luau => luau::breathe(source, &configuration.luau),
@@ -83,112 +83,6 @@ impl Language {
                 &tree_sitter_typescript::LANGUAGE_TSX.into(),
                 &configuration.typescript,
             ),
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::path::Path;
-
-    use crate::configuration::Configuration;
-
-    use super::Language;
-
-    #[test]
-    fn infers_file_languages() {
-        for (path, expected) in [
-            ("main.rs", Language::Rust),
-            ("main.nu", Language::Nushell),
-            ("main.py", Language::Python),
-            ("main.pyi", Language::Python),
-            ("main.js", Language::Javascript),
-            ("main.jsx", Language::Javascript),
-            ("main.mjs", Language::Javascript),
-            ("main.cjs", Language::Javascript),
-            ("main.ts", Language::Typescript),
-            ("main.mts", Language::Typescript),
-            ("main.cts", Language::Typescript),
-            ("main.tsx", Language::Tsx),
-            ("main.luau", Language::Luau),
-            ("main.c", Language::C),
-            ("header.h", Language::C),
-            ("main.cpp", Language::CPlusPlus),
-            ("main.cc", Language::CPlusPlus),
-            ("main.cxx", Language::CPlusPlus),
-            ("header.hpp", Language::CPlusPlus),
-            ("header.hh", Language::CPlusPlus),
-            ("header.hxx", Language::CPlusPlus),
-            ("main.C", Language::CPlusPlus),
-        ] {
-            assert_eq!(Language::infer(Path::new(path)), Some(expected));
-        }
-
-        assert_eq!(Language::infer(Path::new("unknown")), None);
-
-        assert_eq!(Language::infer(Path::new("main.lua")), Some(Language::Lua));
-    }
-
-    #[test]
-    fn dispatches_formatting() {
-        for (language, source, expected) in [
-            (
-                Language::Luau,
-                r"local value = 1
-return value
-",
-                r"local value = 1
-
-return value
-",
-            ),
-            (
-                Language::Rust,
-                r"fn example() {
-    work();
-    result
-}
-",
-                r"fn example() {
-    work();
-
-    result
-}
-",
-            ),
-            (
-                Language::C,
-                r"int example(void) {
-    int value = 1;
-    return value;
-}
-",
-                r"int example(void) {
-    int value = 1;
-
-    return value;
-}
-",
-            ),
-            (
-                Language::CPlusPlus,
-                r"int example() {
-    auto value = 1;
-    return value;
-}
-",
-                r"int example() {
-    auto value = 1;
-
-    return value;
-}
-",
-            ),
-        ] {
-            assert_eq!(
-                language.format(source, &Configuration::default()).unwrap(),
-                expected
-            );
         }
     }
 }

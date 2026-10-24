@@ -1,0 +1,8 @@
+[
+  {
+    "language": "rust",
+    "input": "input.rs",
+    "output": "output.rs",
+    "success": true
+  }
+]

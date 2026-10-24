@@ -1,0 +1,19 @@
+{
+  "files": {
+    "untouched.luau": "../../data/input.luau"
+  },
+  "steps": [
+    {
+      "arguments": [
+        "-l",
+        "unknown"
+      ],
+      "success": false,
+      "files": {
+        "untouched.luau": "../../data/input.luau"
+      },
+      "stdout": "../../data/empty.txt",
+      "stderr": "../../data/arguments5.json"
+    }
+  ]
+}

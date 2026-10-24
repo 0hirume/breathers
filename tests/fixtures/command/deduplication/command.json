@@ -1,0 +1,32 @@
+{
+  "files": {
+    "root.c": "../../c/command/standard/input.c",
+    "src/nested/main.c": "../../c/command/standard/input.c",
+    "target/generated.c": "../../c/command/standard/input.c",
+    ".git/ignored.c": "../../c/command/standard/input.c",
+    ".venv/ignored.c": "../../c/command/standard/input.c",
+    "node_modules/ignored.c": "../../c/command/standard/input.c",
+    "src/target/ignored.c": "../../c/command/standard/input.c",
+    "src/notes.txt": "../../c/command/standard/input.c"
+  },
+  "steps": [
+    {
+      "arguments": [
+        ".",
+        "src",
+        "root.c"
+      ],
+      "success": true,
+      "files": {
+        "root.c": "../../c/command/standard/output.c",
+        "src/nested/main.c": "../../c/command/standard/output.c",
+        "target/generated.c": "../../c/command/standard/input.c",
+        ".git/ignored.c": "../../c/command/standard/input.c",
+        ".venv/ignored.c": "../../c/command/standard/input.c",
+        "node_modules/ignored.c": "../../c/command/standard/input.c",
+        "src/target/ignored.c": "../../c/command/standard/input.c",
+        "src/notes.txt": "../../c/command/standard/input.c"
+      }
+    }
+  ]
+}

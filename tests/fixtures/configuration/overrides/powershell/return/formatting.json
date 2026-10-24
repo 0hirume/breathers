@@ -1,0 +1,29 @@
+[
+  {
+    "language": "powershell",
+    "input": "before.ps1",
+    "output": "after.ps1",
+    "success": true
+  },
+  {
+    "language": "powershell",
+    "input": "before.ps1",
+    "output": "before.ps1",
+    "success": true,
+    "configuration": "configuration2.toml"
+  },
+  {
+    "language": "powershell",
+    "input": "before.ps1",
+    "output": "after.ps1",
+    "success": true,
+    "configuration": "configuration3.toml"
+  },
+  {
+    "language": "powershell",
+    "input": "before.ps1",
+    "output": "before.ps1",
+    "success": true,
+    "configuration": "configuration4.toml"
+  }
+]

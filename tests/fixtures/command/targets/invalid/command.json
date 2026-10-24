@@ -1,0 +1,18 @@
+{
+  "files": {
+    "first/main.luau": "../../data/input.luau",
+    "broken/breathers.toml": "../../data/invalid1.toml",
+    "broken/main.luau": "../../data/input.luau"
+  },
+  "steps": [
+    {
+      "arguments": ["first", "broken"],
+      "success": false,
+      "stdout": "../../data/empty.txt",
+      "files": {
+        "first/main.luau": "../../data/input.luau",
+        "broken/main.luau": "../../data/input.luau"
+      }
+    }
+  ]
+}

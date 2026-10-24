@@ -1,0 +1,17 @@
+{
+  "files": {
+    "breathers.toml": null,
+    "project/src/main.luau": "../../data/input.luau",
+    "project/other/main.luau": "../../data/input.luau"
+  },
+  "steps": [
+    {
+      "arguments": ["--include", "project/src/**", "project"],
+      "success": true,
+      "files": {
+        "project/src/main.luau": "../../data/output.luau",
+        "project/other/main.luau": "../../data/input.luau"
+      }
+    }
+  ]
+}

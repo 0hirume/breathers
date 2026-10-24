@@ -1,0 +1,20 @@
+{
+  "files": {
+    "changed.luau": "../data/input.luau",
+    "unknown": "../data/input.luau"
+  },
+  "steps": [
+    {
+      "arguments": [
+        "changed.luau",
+        "unknown"
+      ],
+      "success": false,
+      "files": {
+        "changed.luau": "../data/input.luau",
+        "unknown": "../data/input.luau"
+      },
+      "stderr": "../data/aborted.json"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "language": "javascript",
+    "input": "input.js",
+    "output": "output.js",
+    "success": true
+  },
+  {
+    "language": "typescript",
+    "input": "input.js",
+    "output": "output.js",
+    "success": true
+  },
+  {
+    "language": "tsx",
+    "input": "input.js",
+    "output": "output.js",
+    "success": true
+  }
+]

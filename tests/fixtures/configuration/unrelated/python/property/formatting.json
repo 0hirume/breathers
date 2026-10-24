@@ -1,0 +1,15 @@
+[
+  {
+    "language": "python",
+    "input": "before.py",
+    "output": "after.py",
+    "success": true
+  },
+  {
+    "language": "python",
+    "input": "before.py",
+    "output": "after.py",
+    "success": true,
+    "configuration": "configuration2.toml"
+  }
+]

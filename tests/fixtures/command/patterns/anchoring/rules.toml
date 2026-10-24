@@ -1,0 +1,1 @@
+exclude = ["/rooted/", "path/selected.luau", "/only.luau"]

@@ -1,0 +1,11 @@
+{
+  "contains": [
+    "Unknown language",
+    "Aborted",
+    "2 processed \u00b7 0 changed \u00b7 0 unchanged \u00b7 1 failed \u00b7 ",
+    "1 prepared changes not written"
+  ],
+  "excludes": [
+    "Formatted"
+  ]
+}

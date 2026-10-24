@@ -1,0 +1,35 @@
+{
+  "files": {
+    "keep.luau": "../../data/input.luau",
+    "nested/keep.luau": "../../data/input.luau",
+    "blocked.luau": "../../data/input.luau",
+    "nested/blocked.luau": "../../data/input.luau",
+    "breathers.toml": "rules.toml"
+  },
+  "steps": [
+    {
+      "arguments": [],
+      "success": true,
+      "files": {
+        "keep.luau": "../../data/output.luau",
+        "nested/keep.luau": "../../data/output.luau",
+        "blocked.luau": "../../data/input.luau",
+        "nested/blocked.luau": "../../data/input.luau"
+      }
+    },
+    {
+      "arguments": [
+        "-e",
+        "!blocked.luau",
+        "."
+      ],
+      "success": true,
+      "files": {
+        "keep.luau": "../../data/output.luau",
+        "nested/keep.luau": "../../data/output.luau",
+        "blocked.luau": "../../data/output.luau",
+        "nested/blocked.luau": "../../data/output.luau"
+      }
+    }
+  ]
+}

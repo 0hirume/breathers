@@ -1,0 +1,9 @@
+[
+  {
+    "language": "nushell",
+    "input": "input.nu",
+    "output": "output.nu",
+    "success": true,
+    "configuration": "configuration1.toml"
+  }
+]

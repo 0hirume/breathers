@@ -7,7 +7,10 @@ use std::{
 
 use console::style;
 use indicatif::ProgressBar;
+use miette::{GraphicalReportHandler, GraphicalTheme};
 use serde::Serialize;
+
+use crate::error::Failure;
 
 use super::arguments::{Arguments, Color};
 
@@ -123,7 +126,7 @@ impl Reporting {
         index
     }
 
-    pub(super) fn progress(&self, message: &str) -> Result<(), String> {
+    pub(super) fn progress(&self, message: &str) -> Result<(), Failure> {
         if self.verbosity == Verbosity::Verbose && !self.json {
             if self.indicator.is_hidden() {
                 stderr(message)?;
@@ -135,7 +138,7 @@ impl Reporting {
         Ok(())
     }
 
-    pub(super) fn success(&self, index: usize) -> Result<(), String> {
+    pub(super) fn success(&self, index: usize) -> Result<(), Failure> {
         let record = &self.files[index];
 
         if self.verbosity == Verbosity::Quiet
@@ -161,15 +164,15 @@ impl Reporting {
         })
     }
 
-    pub(super) fn error(&mut self, error: String) {
-        if let Err(output) = self.indicator.suspend(|| report(&error, self.colors)) {
-            self.errors.push(output);
+    pub(super) fn error(&mut self, error: &Failure) {
+        if let Err(output) = self.indicator.suspend(|| report(error, self.colors)) {
+            self.errors.push(output.to_string());
         }
 
-        self.errors.push(error);
+        self.errors.push(error.to_string());
     }
 
-    pub(super) fn abort(&mut self, error: String) {
+    pub(super) fn abort(&mut self, error: Failure) {
         self.aborted = true;
 
         let unwritten = self
@@ -179,15 +182,15 @@ impl Reporting {
             .count();
 
         let error = if unwritten > 0 {
-            format!("{error}\n  {unwritten} prepared changes not written")
+            error.context(&format!("{unwritten} prepared changes not written"))
         } else {
             error
         };
 
-        self.error(error);
+        self.error(&error);
     }
 
-    pub(super) fn finish(self) -> Result<ExitCode, String> {
+    pub(super) fn finish(self) -> Result<ExitCode, Failure> {
         self.indicator.finish_and_clear();
 
         let mut summary = Summary::default();
@@ -270,30 +273,35 @@ pub(super) fn colors(color: Color) -> bool {
     }
 }
 
-pub(super) fn report(error: &str, colors: bool) -> Result<(), String> {
-    stderr(&format!(
-        "{} {error}",
-        style("error:")
-            .for_stderr()
-            .red()
-            .bold()
-            .force_styling(colors),
-    ))
+pub(super) fn report(error: &Failure, colors: bool) -> Result<(), Failure> {
+    let theme = if colors {
+        GraphicalTheme::unicode()
+    } else {
+        GraphicalTheme::unicode_nocolor()
+    };
+
+    let mut rendered = String::new();
+
+    GraphicalReportHandler::new_themed(theme)
+        .render_report(&mut rendered, error)
+        .map_err(|error| error.to_string())?;
+
+    stderr(rendered.trim_end_matches('\n'))
 }
 
-pub(super) fn stdout(source: &str) -> Result<(), String> {
+pub(super) fn stdout(source: &str) -> Result<(), Failure> {
     let mut output = io::stdout().lock();
 
     output
         .write_all(source.as_bytes())
         .and_then(|()| output.flush())
-        .map_err(|error| format!("stdout: {error}"))
+        .map_err(|error| Failure::from(error).context("stdout"))
 }
 
-fn stderr(message: &str) -> Result<(), String> {
+fn stderr(message: &str) -> Result<(), Failure> {
     let mut output = io::stderr().lock();
 
     writeln!(output, "{message}")
         .and_then(|()| output.flush())
-        .map_err(|error| format!("stderr: {error}"))
+        .map_err(|error| Failure::from(error).context("stderr"))
 }

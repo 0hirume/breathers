@@ -1,0 +1,4 @@
+include = ["unselected/**"]
+
+[luau]
+returns = false

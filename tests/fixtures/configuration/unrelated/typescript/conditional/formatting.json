@@ -1,0 +1,15 @@
+[
+  {
+    "language": "typescript",
+    "input": "before.ts",
+    "output": "after.ts",
+    "success": true
+  },
+  {
+    "language": "typescript",
+    "input": "before.ts",
+    "output": "after.ts",
+    "success": true,
+    "configuration": "configuration2.toml"
+  }
+]

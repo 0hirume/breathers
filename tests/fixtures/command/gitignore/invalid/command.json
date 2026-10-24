@@ -1,0 +1,15 @@
+{
+  "files": {
+    ".gitignore": "rules.gitignore",
+    "main.luau": "../../data/input.luau"
+  },
+  "steps": [
+    {
+      "arguments": [],
+      "success": false,
+      "stdout": "../../data/empty.txt",
+      "stderr": "error.json",
+      "files": {"main.luau": "../../data/input.luau"}
+    }
+  ]
+}

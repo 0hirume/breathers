@@ -1,0 +1,2 @@
+const pattern = /foo[{}]/;
+finish();

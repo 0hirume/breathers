@@ -1,0 +1,18 @@
+{
+  "files": {
+    "first.luau": "../data/input.luau",
+    "second.luau": "../data/input.luau"
+  },
+  "steps": [
+    {
+      "arguments": [
+        "--source"
+      ],
+      "success": false,
+      "files": {
+        "first.luau": "../data/input.luau",
+        "second.luau": "../data/input.luau"
+      }
+    }
+  ]
+}

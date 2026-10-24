@@ -1,0 +1,37 @@
+{
+  "files": {
+    "main.c": "../../../c/command/standard/input.c",
+    "src/main.cpp": "../../../c/command/standard/input.c",
+    "src/header.h": "../../../c/command/standard/input.c",
+    "src/header.hpp": "../../../c/command/standard/input.c",
+    "target/generated.c": "../../../c/command/standard/input.c"
+  },
+  "steps": [
+    {
+      "arguments": [
+        "src/main.cpp"
+      ],
+      "success": true,
+      "files": {
+        "main.c": "../../../c/command/standard/input.c",
+        "src/main.cpp": "../../../c/command/standard/output.c",
+        "src/header.h": "../../../c/command/standard/input.c",
+        "src/header.hpp": "../../../c/command/standard/input.c",
+        "target/generated.c": "../../../c/command/standard/input.c"
+      }
+    },
+    {
+      "arguments": [
+        "src/main.cpp"
+      ],
+      "success": true,
+      "files": {
+        "main.c": "../../../c/command/standard/input.c",
+        "src/main.cpp": "../../../c/command/standard/output.c",
+        "src/header.h": "../../../c/command/standard/input.c",
+        "src/header.hpp": "../../../c/command/standard/input.c",
+        "target/generated.c": "../../../c/command/standard/input.c"
+      }
+    }
+  ]
+}

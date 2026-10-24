@@ -1,0 +1,3 @@
+["typescript"]
+multiline = true
+type_aliases = false

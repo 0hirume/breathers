@@ -1,0 +1,3 @@
+["rust"]
+arms = false
+match_arms = true

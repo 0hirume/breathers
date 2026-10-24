@@ -1,0 +1,29 @@
+[
+  {
+    "language": "typescript",
+    "input": "before.ts",
+    "output": "after.ts",
+    "success": true
+  },
+  {
+    "language": "typescript",
+    "input": "before.ts",
+    "output": "before.ts",
+    "success": true,
+    "configuration": "configuration2.toml"
+  },
+  {
+    "language": "typescript",
+    "input": "before.ts",
+    "output": "after.ts",
+    "success": true,
+    "configuration": "configuration3.toml"
+  },
+  {
+    "language": "typescript",
+    "input": "before.ts",
+    "output": "before.ts",
+    "success": true,
+    "configuration": "configuration4.toml"
+  }
+]

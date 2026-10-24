@@ -1,0 +1,45 @@
+{
+  "files": {
+    "open/keep.luau": "../../data/input.luau",
+    "tree/nested/keep.luau": "../../data/input.luau",
+    "blocked/keep.luau": "../../data/input.luau",
+    "open/other.luau": "../../data/input.luau",
+    "tree/other.luau": "../../data/input.luau",
+    "tree/nested/other.luau": "../../data/input.luau",
+    "breathers.toml": "rules.toml"
+  },
+  "steps": [
+    {
+      "arguments": [
+        "blocked/keep.luau",
+        "open",
+        "tree"
+      ],
+      "success": true,
+      "files": {
+        "open/keep.luau": "../../data/output.luau",
+        "tree/nested/keep.luau": "../../data/output.luau",
+        "blocked/keep.luau": "../../data/input.luau",
+        "open/other.luau": "../../data/input.luau",
+        "tree/other.luau": "../../data/input.luau",
+        "tree/nested/other.luau": "../../data/input.luau"
+      }
+    },
+    {
+      "arguments": [
+        "-e",
+        "!blocked/",
+        "blocked/keep.luau"
+      ],
+      "success": true,
+      "files": {
+        "open/keep.luau": "../../data/output.luau",
+        "tree/nested/keep.luau": "../../data/output.luau",
+        "blocked/keep.luau": "../../data/output.luau",
+        "open/other.luau": "../../data/input.luau",
+        "tree/other.luau": "../../data/input.luau",
+        "tree/nested/other.luau": "../../data/input.luau"
+      }
+    }
+  ]
+}

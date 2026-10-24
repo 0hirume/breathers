@@ -1,0 +1,4 @@
+include = ["src/**/*.luau"]
+exclude = ["**/generated/**", "src/omit.luau"]
+[luau]
+related = true

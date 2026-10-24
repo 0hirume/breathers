@@ -1,0 +1,22 @@
+[
+  {
+    "language": "javascript",
+    "input": "before.js",
+    "output": "default.js",
+    "success": true
+  },
+  {
+    "language": "javascript",
+    "input": "before.js",
+    "output": "after.js",
+    "success": true,
+    "configuration": "configuration2.toml"
+  },
+  {
+    "language": "javascript",
+    "input": "default.js",
+    "output": "default.js",
+    "success": true,
+    "configuration": "configuration3.toml"
+  }
+]

@@ -1,0 +1,3 @@
+["rust"]
+variants = false
+enum_variants = true

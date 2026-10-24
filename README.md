@@ -65,8 +65,8 @@ breathers src/main.rs src/main.luau
 | `--source`                    | `-s`  | Print one selected file's formatted source to stdout without writing                 |
 | `--quiet`                     | `-q`  | Hide success reports and summary, but keep errors                                    |
 | `--verbose`                   | `-v`  | Show progress and unchanged files                                                    |
-| `--include PATTERN`           | `-i`  | Replace configured includes; repeat for multiple globs                               |
-| `--exclude PATTERN`           | `-e`  | Add exclusions; repeat for multiple globs                                            |
+| `--include PATTERN`           | `-i`  | Select using Git-ignore-style patterns; repeatable, replaces configured includes      |
+| `--exclude PATTERN`           | `-e`  | Exclude using Git-ignore-style patterns; repeatable, adds to configured exclusions    |
 | `--stdin-filepath PATH`       | `-f`  | Give stdin a language and configuration without writing that path                   |
 | `--json`                      | `-j`  | Print a JSON report to stdout                                                        |
 | `--color auto\|always\|never` | `-C`  | Control diagnostic colors; automatic colors respect terminals and `NO_COLOR`         |
@@ -119,7 +119,7 @@ breathers formats C and C++ source syntax with Tree-sitter. Macro text and the b
 
 ## Configuration
 
-breathers loads global settings, then applies the nearest `breathers.toml` above the working directory. Use `-c` or `--config` to select a project configuration.
+breathers loads global settings, then applies the nearest `breathers.toml` starting in each source file's directory and searching its ancestors. Nested projects and multiple input projects each use their own configuration. Use `-c` or `--config` to select one project configuration for all inputs; relative configuration paths resolve from the working directory. Stdin uses `--stdin-filepath` for configuration lookup when supplied, otherwise the working directory.
 
 Global settings use `breathers/config.toml` under `%APPDATA%` on Windows or `~/Library/Application Support` on macOS. On Linux, the base directory is `$XDG_CONFIG_HOME` or, if unset, `~/.config`.
 
@@ -137,7 +137,18 @@ returns = false
 tail_expressions = true
 ```
 
-Globs use paths relative to the project configuration directory. If breathers finds no project configuration, it uses the working directory. Command-line includes replace configured includes. Command-line exclusions add to configured exclusions and take precedence over includes. Directory searches skip `.git`, `target`, `.venv`, `node_modules`, and symbolic links.
+Include and exclude lists use ordered Git-ignore-style patterns rooted at the project configuration directory, or the working directory when no project configuration exists:
+
+- `fixtures` matches files or directories named `fixtures` at any depth, including `tests/fixtures`.
+- `/fixtures` matches only at the configuration root. A slash within a pattern, such as `tests/fixtures`, also makes it root-relative.
+- `fixtures/` matches only directories and their contents.
+- `*`, `?`, and character classes match within a path component; `**` can match across directories.
+- Later matching rules win. In exclusions, `!pattern` re-includes matching paths, provided their parent directories are not excluded. For example, `["fixtures/*", "!fixtures/keep.luau"]` keeps that file selectable.
+- Blank patterns and patterns starting with `#` are ignored. Backslashes escape leading `#` or `!` and trailing spaces; TOML literal strings such as `'\#notes'` preserve those backslashes.
+
+Positive include patterns select matching files and directory contents; negated patterns remove them from selection. Command-line includes replace configured includes. Command-line exclusions append to configured exclusions, so later command-line negations can undo configured rules. Exclusions take precedence over includes. Directory searches skip `.git`, `target`, `.venv`, `node_modules`, and symbolic links.
+
+Directory searches respect parent and nested `.gitignore` files, including negation patterns, even outside Git repositories. Explicitly named files bypass Git ignores; configured and command-line includes and exclusions still apply.
 
 Language sections control spacing. JSX uses `javascript`. TSX uses `typescript`. breathers enables rule groups by default. Individual rules inherit their group's setting unless you override it. Nushell's `match_arms` and `record_fields` and Python's `dictionary_entries` default to off unless you enable the rule or its group. The `related` rule is off by default. Enable it to keep adjacent variable dependencies together. It preserves existing blank lines.
 

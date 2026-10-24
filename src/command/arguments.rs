@@ -34,7 +34,7 @@ pub(super) struct Arguments {
         short = 'i',
         long,
         value_name = "PATTERN",
-        help = "Select files matching a project-relative glob; repeatable, replaces configured includes"
+        help = "Select using a Git-ignore-style pattern; repeatable, replaces configured includes"
     )]
     pub(super) include: Vec<String>,
 
@@ -42,7 +42,7 @@ pub(super) struct Arguments {
         short = 'e',
         long,
         value_name = "PATTERN",
-        help = "Exclude a project-relative glob; repeatable, adds to configured exclusions"
+        help = "Exclude using a Git-ignore-style pattern; repeatable, adds to configured exclusions"
     )]
     pub(super) exclude: Vec<String>,
 
@@ -119,62 +119,4 @@ pub(super) struct Output {
         help = "Control diagnostic colors"
     )]
     pub(super) color: Color,
-}
-
-#[cfg(test)]
-mod tests {
-    use std::path::PathBuf;
-
-    use clap::Parser as _;
-
-    use crate::languages::Language;
-
-    use super::Arguments;
-
-    #[test]
-    fn accepts_language_options() {
-        assert!(Arguments::try_parse_from(["breathers", "-l", "unknown"]).is_err());
-
-        assert_eq!(
-            Arguments::try_parse_from(["breathers"]).unwrap().language,
-            None
-        );
-
-        for flag in ["-l", "--language"] {
-            for (name, expected) in [
-                ("rust", Language::Rust),
-                ("c", Language::C),
-                ("c++", Language::CPlusPlus),
-                ("luau", Language::Luau),
-                ("lua", Language::Lua),
-            ] {
-                assert_eq!(
-                    Arguments::try_parse_from(["breathers", flag, name, "header.h"])
-                        .unwrap()
-                        .language,
-                    Some(expected)
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn accepts_default_directory_file_and_multiple_paths() {
-        for (input, expected) in [
-            (vec!["breathers"], vec!["."]),
-            (vec!["breathers", "src/"], vec!["src/"]),
-            (vec!["breathers", "src/main.rs"], vec!["src/main.rs"]),
-            (
-                vec!["breathers", "src/", "main.rs"],
-                vec!["src/", "main.rs"],
-            ),
-        ] {
-            let parsed = Arguments::try_parse_from(input).unwrap();
-
-            assert_eq!(
-                parsed.paths,
-                expected.into_iter().map(PathBuf::from).collect::<Vec<_>>()
-            );
-        }
-    }
 }

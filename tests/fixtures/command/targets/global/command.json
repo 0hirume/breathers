@@ -1,0 +1,22 @@
+{
+  "files": {
+    ".application/breathers/config.toml": "../../data/disabled.toml",
+    ".configuration/breathers/config.toml": "../../data/disabled.toml",
+    ".home/Library/Application Support/breathers/config.toml": "../../data/disabled.toml",
+    "breathers.toml": "../../data/enabled.toml",
+    "first/breathers.toml": "../../data/empty.txt",
+    "first/main.luau": "../../data/input.luau",
+    "second/breathers.toml": "../../data/enabled.toml",
+    "second/main.luau": "../../data/input.luau"
+  },
+  "steps": [
+    {
+      "arguments": ["first", "second"],
+      "success": true,
+      "files": {
+        "first/main.luau": "../../data/input.luau",
+        "second/main.luau": "../../data/output.luau"
+      }
+    }
+  ]
+}

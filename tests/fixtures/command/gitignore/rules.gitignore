@@ -1,0 +1,7 @@
+/ignored.luau
+/generated/
+/broken/
+nested/*.luau
+!nested/keep.luau
+\#hash.luau
+\!bang.luau

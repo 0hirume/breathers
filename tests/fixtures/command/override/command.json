@@ -1,0 +1,18 @@
+{
+  "files": {
+    "source.h": "../../cplusplus/command/template/input.cpp"
+  },
+  "steps": [
+    {
+      "arguments": [
+        "-l",
+        "c++",
+        "source.h"
+      ],
+      "success": true,
+      "files": {
+        "source.h": "../../cplusplus/command/template/output.cpp"
+      }
+    }
+  ]
+}

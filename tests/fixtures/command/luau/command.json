@@ -1,0 +1,20 @@
+{
+  "files": {
+    "src/main.luau": "../data/input.luau",
+    "src/module.lua": "../data/typed.lua"
+  },
+  "steps": [
+    {
+      "arguments": [
+        "-l",
+        "luau",
+        "src"
+      ],
+      "success": true,
+      "files": {
+        "src/main.luau": "../data/output.luau",
+        "src/module.lua": "../data/typed.luau"
+      }
+    }
+  ]
+}

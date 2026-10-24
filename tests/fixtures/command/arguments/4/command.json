@@ -1,0 +1,20 @@
+{
+  "files": {
+    "untouched.luau": "../../data/input.luau"
+  },
+  "steps": [
+    {
+      "arguments": [
+        "--stdin-filepath",
+        "untouched.luau",
+        "untouched.luau"
+      ],
+      "success": false,
+      "files": {
+        "untouched.luau": "../../data/input.luau"
+      },
+      "stdout": "../../data/empty.txt",
+      "stderr": "../../data/arguments4.json"
+    }
+  ]
+}

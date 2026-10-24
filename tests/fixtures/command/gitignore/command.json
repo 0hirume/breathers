@@ -1,0 +1,59 @@
+{
+  "files": {
+    ".gitignore": "rules.gitignore",
+    "main.luau": "../data/input.luau",
+    ".hidden.luau": "../data/input.luau",
+    "ignored.luau": "../data/input.luau",
+    "#hash.luau": "../data/input.luau",
+    "!bang.luau": "../data/input.luau",
+    "generated/source.luau": "../data/input.luau",
+    "broken/breathers.toml": "../data/invalid1.toml",
+    "broken/source.luau": "../data/invalid.luau",
+    "nested/.gitignore": "nested.gitignore",
+    "nested/keep.luau": "../data/input.luau",
+    "nested/restored.luau": "../data/input.luau",
+    "nested/ignored.luau": "../data/input.luau"
+  },
+  "steps": [
+    {
+      "arguments": [],
+      "success": true,
+      "files": {
+        "main.luau": "../data/output.luau",
+        ".hidden.luau": "../data/output.luau",
+        "ignored.luau": "../data/input.luau",
+        "#hash.luau": "../data/input.luau",
+        "!bang.luau": "../data/input.luau",
+        "generated/source.luau": "../data/input.luau",
+        "broken/source.luau": "../data/invalid.luau",
+        "nested/keep.luau": "../data/input.luau",
+        "nested/restored.luau": "../data/output.luau",
+        "nested/ignored.luau": "../data/input.luau"
+      }
+    },
+    {
+      "arguments": ["--include", "ignored.luau", "."],
+      "success": true,
+      "files": {"ignored.luau": "../data/input.luau"}
+    },
+    {
+      "arguments": ["--exclude", "ignored.luau", "ignored.luau"],
+      "success": true,
+      "files": {"ignored.luau": "../data/input.luau"}
+    },
+    {
+      "arguments": ["generated"],
+      "success": true,
+      "files": {"generated/source.luau": "../data/input.luau"}
+    },
+    {
+      "arguments": ["ignored.luau", "generated/source.luau", "nested/keep.luau"],
+      "success": true,
+      "files": {
+        "ignored.luau": "../data/output.luau",
+        "generated/source.luau": "../data/output.luau",
+        "nested/keep.luau": "../data/output.luau"
+      }
+    }
+  ]
+}

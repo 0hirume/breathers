@@ -1,0 +1,49 @@
+[
+  {
+    "language": "tsx",
+    "input": "before.tsx",
+    "output": "after.tsx",
+    "success": true
+  },
+  {
+    "language": "tsx",
+    "input": "before.tsx",
+    "output": "before.tsx",
+    "success": true,
+    "configuration": "configuration2.toml"
+  },
+  {
+    "language": "tsx",
+    "input": "before.tsx",
+    "output": "after.tsx",
+    "success": true,
+    "configuration": "configuration3.toml"
+  },
+  {
+    "language": "tsx",
+    "input": "before.tsx",
+    "output": "before.tsx",
+    "success": true,
+    "configuration": "configuration4.toml"
+  },
+  {
+    "language": "tsx",
+    "input": "before.tsx",
+    "output": "after.tsx",
+    "success": true
+  },
+  {
+    "language": "tsx",
+    "input": "before.tsx",
+    "output": "before.tsx",
+    "success": true,
+    "configuration": "configuration6.toml"
+  },
+  {
+    "language": "tsx",
+    "input": "after.tsx",
+    "output": "after.tsx",
+    "success": true,
+    "configuration": "configuration7.toml"
+  }
+]

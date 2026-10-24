@@ -1,0 +1,22 @@
+[
+  {
+    "language": "c++",
+    "input": "before.cpp",
+    "output": "after.cpp",
+    "success": true
+  },
+  {
+    "language": "c++",
+    "input": "before.cpp",
+    "output": "before.cpp",
+    "success": true,
+    "configuration": "configuration2.toml"
+  },
+  {
+    "language": "c++",
+    "input": "after.cpp",
+    "output": "after.cpp",
+    "success": true,
+    "configuration": "configuration3.toml"
+  }
+]

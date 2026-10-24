@@ -1,0 +1,15 @@
+[
+  {
+    "language": "c",
+    "input": "before.c",
+    "output": "after.c",
+    "success": true
+  },
+  {
+    "language": "c",
+    "input": "before.c",
+    "output": "after.c",
+    "success": true,
+    "configuration": "configuration2.toml"
+  }
+]

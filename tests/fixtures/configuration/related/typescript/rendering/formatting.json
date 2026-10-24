@@ -1,0 +1,22 @@
+[
+  {
+    "language": "tsx",
+    "input": "before.tsx",
+    "output": "default.tsx",
+    "success": true
+  },
+  {
+    "language": "tsx",
+    "input": "before.tsx",
+    "output": "after.tsx",
+    "success": true,
+    "configuration": "configuration2.toml"
+  },
+  {
+    "language": "tsx",
+    "input": "default.tsx",
+    "output": "default.tsx",
+    "success": true,
+    "configuration": "configuration3.toml"
+  }
+]

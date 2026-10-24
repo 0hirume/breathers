@@ -1,0 +1,39 @@
+{
+  "files": {
+    "main.luau": "../../data/input.luau",
+    "tests/other.luau": "../../data/input.luau",
+    "fixtures/main.luau": "../../data/input.luau",
+    "tests/fixtures/main.luau": "../../data/input.luau",
+    "assets/fixtures": "../../data/input.luau",
+    "tests/fixtures/breathers.toml": "../../data/invalid1.toml",
+    "breathers.toml": "rules.toml"
+  },
+  "steps": [
+    {
+      "arguments": [],
+      "success": true,
+      "files": {
+        "main.luau": "../../data/output.luau",
+        "tests/other.luau": "../../data/output.luau",
+        "fixtures/main.luau": "../../data/input.luau",
+        "tests/fixtures/main.luau": "../../data/input.luau",
+        "assets/fixtures": "../../data/input.luau"
+      }
+    },
+    {
+      "arguments": [
+        "-l",
+        "luau",
+        "assets/fixtures"
+      ],
+      "success": true,
+      "files": {
+        "main.luau": "../../data/output.luau",
+        "tests/other.luau": "../../data/output.luau",
+        "fixtures/main.luau": "../../data/input.luau",
+        "tests/fixtures/main.luau": "../../data/input.luau",
+        "assets/fixtures": "../../data/input.luau"
+      }
+    }
+  ]
+}

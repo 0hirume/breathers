@@ -1,0 +1,22 @@
+{
+  "files": {
+    "changed.luau": "../data/input.luau",
+    "unchanged.lua": "../data/output.luau",
+    "broken.rs": "../data/invalid.rs"
+  },
+  "steps": [
+    {
+      "arguments": [
+        "--verbose"
+      ],
+      "success": false,
+      "files": {
+        "changed.luau": "../data/output.luau",
+        "unchanged.lua": "../data/output.luau",
+        "broken.rs": "../data/invalid.rs"
+      },
+      "stdout": "../data/empty.txt",
+      "stderr": "../data/progress.json"
+    }
+  ]
+}

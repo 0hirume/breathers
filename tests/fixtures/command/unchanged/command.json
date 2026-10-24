@@ -1,0 +1,18 @@
+{
+  "files": {
+    "first.lua": "../data/output.luau",
+    "second.luau": "../data/output.luau"
+  },
+  "steps": [
+    {
+      "arguments": [],
+      "success": true,
+      "files": {
+        "first.lua": "../data/output.luau",
+        "second.luau": "../data/output.luau"
+      },
+      "stdout": "../data/empty.txt",
+      "stderr": "../data/unchanged.json"
+    }
+  ]
+}

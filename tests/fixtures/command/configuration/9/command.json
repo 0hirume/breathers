@@ -1,0 +1,16 @@
+{
+  "files": {
+    "untouched.luau": "../../data/input.luau",
+    "breathers.toml": "../../data/invalid9.toml"
+  },
+  "steps": [
+    {
+      "arguments": [],
+      "success": false,
+      "files": {
+        "untouched.luau": "../../data/input.luau"
+      },
+      "stdout": "../../data/empty.txt"
+    }
+  ]
+}

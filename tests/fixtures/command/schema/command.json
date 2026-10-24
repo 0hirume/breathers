@@ -1,0 +1,13 @@
+{
+  "files": {},
+  "steps": [
+    {
+      "arguments": [
+        "--schema"
+      ],
+      "success": true,
+      "files": {},
+      "stdout": "../../../../schema.json"
+    }
+  ]
+}

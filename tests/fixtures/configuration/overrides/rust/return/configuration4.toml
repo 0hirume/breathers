@@ -1,0 +1,3 @@
+["rust"]
+returns = true
+return_statements = false

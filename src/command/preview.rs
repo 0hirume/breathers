@@ -1,3 +1,5 @@
+use similar::TextDiff;
+
 pub(super) fn diff(path: &str, source: &str, formatted: &str) -> String {
     let path = if cfg!(windows) {
         path.replace('\\', "/")
@@ -5,29 +7,10 @@ pub(super) fn diff(path: &str, source: &str, formatted: &str) -> String {
         path.to_owned()
     };
 
-    let before = source.split_inclusive('\n').count();
-    let after = formatted.split_inclusive('\n').count();
-    let original = label(&format!("a/{path}"));
-    let replacement = label(&format!("b/{path}"));
-
-    let mut output = format!(
-        "--- {original}\n+++ {replacement}\n@@ -{},{before} +{},{after} @@\n",
-        usize::from(before > 0),
-        usize::from(after > 0),
-    );
-
-    for (prefix, text) in [('-', source), ('+', formatted)] {
-        for line in text.split_inclusive('\n') {
-            output.push(prefix);
-            output.push_str(line);
-
-            if !line.ends_with('\n') {
-                output.push_str("\n\\ No newline at end of file\n");
-            }
-        }
-    }
-
-    output
+    TextDiff::from_lines(source, formatted)
+        .unified_diff()
+        .header(&label(&format!("a/{path}")), &label(&format!("b/{path}")))
+        .to_string()
 }
 
 fn label(path: &str) -> String {

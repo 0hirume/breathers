@@ -1,0 +1,8 @@
+[
+  {
+    "language": "nushell",
+    "input": "input.nu",
+    "output": "output.nu",
+    "success": true
+  }
+]

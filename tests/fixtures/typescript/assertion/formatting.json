@@ -1,0 +1,14 @@
+[
+  {
+    "language": "typescript",
+    "input": "input.ts",
+    "output": "output.ts",
+    "success": true
+  },
+  {
+    "language": "tsx",
+    "input": "input.ts",
+    "output": "empty.txt",
+    "success": false
+  }
+]

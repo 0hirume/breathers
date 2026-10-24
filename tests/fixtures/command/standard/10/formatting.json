@@ -1,0 +1,8 @@
+[
+  {
+    "language": "tsx",
+    "input": "input.tsx",
+    "output": "output.tsx",
+    "success": true
+  }
+]

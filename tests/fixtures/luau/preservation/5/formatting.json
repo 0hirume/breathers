@@ -1,0 +1,8 @@
+[
+  {
+    "language": "luau",
+    "input": "input.luau",
+    "output": "output.luau",
+    "success": true
+  }
+]

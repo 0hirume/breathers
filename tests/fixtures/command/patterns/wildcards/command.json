@@ -1,0 +1,41 @@
+{
+  "files": {
+    "hide12.luau": "../../data/input.luau",
+    "range3.luau": "../../data/input.luau",
+    "single/nested/main.luau": "../../data/input.luau",
+    "any/nested/shown.luau": "../../data/input.luau",
+    "hide1.luau": "../../data/input.luau",
+    "range1.luau": "../../data/input.luau",
+    "single/direct.luau": "../../data/input.luau",
+    "any/hidden.luau": "../../data/input.luau",
+    "any/nested/hidden.luau": "../../data/input.luau",
+    "any/nested/deeper/hidden.luau": "../../data/input.luau",
+    "deep/main.luau": "../../data/input.luau",
+    "deep/nested/main.luau": "../../data/input.luau",
+    "every.luau": "../../data/input.luau",
+    "nested/every.luau": "../../data/input.luau",
+    "breathers.toml": "rules.toml"
+  },
+  "steps": [
+    {
+      "arguments": [],
+      "success": true,
+      "files": {
+        "hide12.luau": "../../data/output.luau",
+        "range3.luau": "../../data/output.luau",
+        "single/nested/main.luau": "../../data/output.luau",
+        "any/nested/shown.luau": "../../data/output.luau",
+        "hide1.luau": "../../data/input.luau",
+        "range1.luau": "../../data/input.luau",
+        "single/direct.luau": "../../data/input.luau",
+        "any/hidden.luau": "../../data/input.luau",
+        "any/nested/hidden.luau": "../../data/input.luau",
+        "any/nested/deeper/hidden.luau": "../../data/input.luau",
+        "deep/main.luau": "../../data/input.luau",
+        "deep/nested/main.luau": "../../data/input.luau",
+        "every.luau": "../../data/input.luau",
+        "nested/every.luau": "../../data/input.luau"
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+[
+  {
+    "language": "rust",
+    "input": "before.rs",
+    "output": "after.rs",
+    "success": true
+  },
+  {
+    "language": "rust",
+    "input": "before.rs",
+    "output": "after.rs",
+    "success": true,
+    "configuration": "configuration2.toml"
+  }
+]

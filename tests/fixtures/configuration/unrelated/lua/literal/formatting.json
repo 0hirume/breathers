@@ -1,0 +1,15 @@
+[
+  {
+    "language": "lua",
+    "input": "before.lua",
+    "output": "after.lua",
+    "success": true
+  },
+  {
+    "language": "lua",
+    "input": "before.lua",
+    "output": "after.lua",
+    "success": true,
+    "configuration": "configuration2.toml"
+  }
+]

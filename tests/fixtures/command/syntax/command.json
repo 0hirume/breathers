@@ -1,0 +1,16 @@
+{
+  "files": {
+    "changed.luau": "../data/input.luau",
+    "broken.rs": "../data/invalid.rs"
+  },
+  "steps": [
+    {
+      "arguments": [],
+      "success": false,
+      "files": {
+        "changed.luau": "../data/output.luau",
+        "broken.rs": "../data/invalid.rs"
+      }
+    }
+  ]
+}

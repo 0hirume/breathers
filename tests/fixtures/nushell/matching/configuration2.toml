@@ -1,0 +1,3 @@
+[nushell]
+record_fields = true
+match_arms = true

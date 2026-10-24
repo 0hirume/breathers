@@ -1,0 +1,43 @@
+[
+  {
+    "language": "javascript",
+    "input": "before.js",
+    "output": "after.js",
+    "success": true
+  },
+  {
+    "language": "javascript",
+    "input": "before.js",
+    "output": "before.js",
+    "success": true,
+    "configuration": "configuration2.toml"
+  },
+  {
+    "language": "javascript",
+    "input": "before.js",
+    "output": "after.js",
+    "success": true,
+    "configuration": "configuration3.toml"
+  },
+  {
+    "language": "javascript",
+    "input": "before.js",
+    "output": "before.js",
+    "success": true,
+    "configuration": "configuration4.toml"
+  },
+  {
+    "language": "javascript",
+    "input": "before.js",
+    "output": "before.js",
+    "success": true,
+    "configuration": "configuration5.toml"
+  },
+  {
+    "language": "javascript",
+    "input": "before.js",
+    "output": "after.js",
+    "success": true,
+    "configuration": "configuration6.toml"
+  }
+]

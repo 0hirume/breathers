@@ -1,0 +1,15 @@
+[
+  {
+    "language": "powershell",
+    "input": "input.ps1",
+    "output": "output.ps1",
+    "success": true
+  },
+  {
+    "language": "powershell",
+    "input": "input.ps1",
+    "output": "input.ps1",
+    "success": true,
+    "configuration": "configuration2.toml"
+  }
+]

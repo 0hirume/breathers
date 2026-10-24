@@ -1,0 +1,8 @@
+[
+  {
+    "language": "typescript",
+    "input": "input.ts",
+    "output": "output.ts",
+    "success": true
+  }
+]

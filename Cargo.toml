@@ -2,7 +2,7 @@
 name = "breathers"
 version = "0.6.3"
 edition = "2024"
-description = "Give rust code breathing room with automatic blank-line spacing"
+description = "Give source code breathing room with automatic blank-line spacing"
 repository = "https://github.com/0hirume/breathers"
 license = "MIT"
 keywords = ["formatter", "readability", "rust", "whitespace"]
@@ -12,18 +12,27 @@ publish = false
 [package.metadata.dist]
 dist = true
 
+[[test]]
+harness = false
+name = "fixtures"
+
 [dependencies]
-clap = { version = "4", features = ["derive", "error-context", "help", "std", "usage"] }
-console = { version = "0.16", features = ["std"] }
+clap = { version = "4", features = ["derive"] }
+console = "0.16"
 dirs = "7"
-globset = "0.4"
+ignore = "0.4"
 indicatif = "0.18"
+miette = { git = "https://github.com/zkat/miette", rev = "e853bbf9bc78bbe0b225995de54a3108d77dcaf8", default-features = false, features = ["derive", "fancy-no-syscall"] }
 ra_ap_syntax = "0.0"
 rayon = "1"
+same-file = "1"
 schemars = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-toml = { version = "1", features = ["parse", "serde", "std"] }
+similar = "3"
+tempfile = "3"
+thiserror = "2"
+toml = "1"
 tree-sitter = "0.27"
 tree-sitter-c = "0.24"
 tree-sitter-cpp = "0.23"
@@ -34,6 +43,9 @@ tree-sitter-pwsh = "0.38"
 tree-sitter-python = "0.25"
 tree-sitter-typescript = "0.23"
 vermis = "0.7"
+
+[dev-dependencies]
+datatest-stable = "0.3"
 
 [lints.clippy]
 all = { level = "deny", priority = -1 }
@@ -82,6 +94,9 @@ warnings = { level = "deny", priority = -1 }
 missing_docs = "deny"
 unreachable_pub = "deny"
 unsafe_op_in_unsafe_fn = "deny"
+
+[profile.dev]
+debug = "line-tables-only"
 
 [profile.dist]
 inherits = "release"

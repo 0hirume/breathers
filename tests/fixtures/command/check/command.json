@@ -1,0 +1,16 @@
+{
+  "files": {
+    "input.luau": "../data/input.luau"
+  },
+  "steps": [
+    {
+      "arguments": [
+        "--check"
+      ],
+      "success": false,
+      "files": {
+        "input.luau": "../data/input.luau"
+      }
+    }
+  ]
+}

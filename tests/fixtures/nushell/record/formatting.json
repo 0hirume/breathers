@@ -1,0 +1,22 @@
+[
+  {
+    "language": "nushell",
+    "input": "input.nu",
+    "output": "default.nu",
+    "success": true
+  },
+  {
+    "language": "nushell",
+    "input": "input.nu",
+    "output": "output.nu",
+    "success": true,
+    "configuration": "configuration2.toml"
+  },
+  {
+    "language": "nushell",
+    "input": "input.nu",
+    "output": "output.nu",
+    "success": true,
+    "configuration": "configuration3.toml"
+  }
+]

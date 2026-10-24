@@ -1,0 +1,21 @@
+{
+  "files": {
+    ".application/breathers/config.toml": "../../configuration/loading/global.toml",
+    ".configuration/breathers/config.toml": "../../configuration/loading/global.toml",
+    ".home/Library/Application Support/breathers/config.toml": "../../configuration/loading/global.toml",
+    "project/breathers.toml": "../data/inheritance.toml",
+    "project/nested/main.rs": "../../configuration/overrides/rust/return/before.rs",
+    "project/vendor/ignored.rs": "../../configuration/overrides/rust/return/before.rs"
+  },
+  "steps": [
+    {
+      "arguments": [],
+      "success": true,
+      "files": {
+        "project/nested/main.rs": "../../configuration/overrides/rust/return/after.rs",
+        "project/vendor/ignored.rs": "../../configuration/overrides/rust/return/before.rs"
+      },
+      "directory": "project/nested"
+    }
+  ]
+}

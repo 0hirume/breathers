@@ -6,13 +6,14 @@ use std::{
 
 use clap::Parser as _;
 
-use crate::{configuration, languages::Language};
+use crate::{configuration, error::Failure, languages::Language};
 
 use super::{
     arguments::Arguments,
     batch::batch,
     preview::diff,
     reporting::{Reporting, Status, colors, report, stdout},
+    settings::Settings,
 };
 
 pub(crate) fn run() -> ExitCode {
@@ -30,7 +31,7 @@ pub(crate) fn run() -> ExitCode {
     }
 }
 
-fn execute(arguments: &Arguments) -> Result<ExitCode, String> {
+fn execute(arguments: &Arguments) -> Result<ExitCode, Failure> {
     if arguments.schema {
         let mut schema =
             serde_json::to_string_pretty(&schemars::schema_for!(configuration::Configuration))
@@ -51,7 +52,7 @@ fn execute(arguments: &Arguments) -> Result<ExitCode, String> {
     reporting.finish()
 }
 
-fn format(arguments: &Arguments, reporting: &mut Reporting) -> Result<(), String> {
+fn format(arguments: &Arguments, reporting: &mut Reporting) -> Result<(), Failure> {
     let input = arguments.paths.iter().any(|path| path.as_os_str() == "-");
 
     if input && arguments.paths.len() != 1 {
@@ -79,47 +80,31 @@ fn format(arguments: &Arguments, reporting: &mut Reporting) -> Result<(), String
         None
     };
 
-    let (mut configuration, root) = if let Some(path) = &context {
-        let directory = env::current_dir().map_err(|error| error.to_string())?;
-        let explicit = arguments.config.as_ref().map(|path| directory.join(path));
-
-        configuration::load_in(
-            path.parent()
-                .ok_or("Stdin filepath has no parent directory")?,
-            explicit.as_deref(),
-        )?
-    } else {
-        configuration::load(arguments.config.as_deref())?
-    };
-
-    if !arguments.include.is_empty() {
-        configuration.include = Some(arguments.include.clone());
-    }
-
-    if !arguments.exclude.is_empty() {
-        configuration
-            .exclude
-            .get_or_insert_default()
-            .extend(arguments.exclude.iter().cloned());
-    }
-
-    let selection = configuration::Selection::new(&configuration, root)?;
-
     if let Some(language) = language {
+        let directory = env::current_dir()?;
+
+        let settings = Settings::load(
+            arguments,
+            context
+                .as_deref()
+                .and_then(Path::parent)
+                .unwrap_or(&directory),
+        )?;
+
         stdin(
             arguments,
             language,
             context.as_deref(),
-            &configuration,
+            &settings.configuration,
             reporting,
         )
     } else {
-        batch(arguments, &configuration, &selection, reporting)
+        batch(arguments, reporting)
     }
 }
 
-fn filepath(path: &Path) -> Result<PathBuf, String> {
-    let directory = env::current_dir().map_err(|error| error.to_string())?;
+fn filepath(path: &Path) -> Result<PathBuf, Failure> {
+    let directory = env::current_dir()?;
     let path = directory.join(path);
 
     let parent = path
@@ -130,8 +115,8 @@ fn filepath(path: &Path) -> Result<PathBuf, String> {
         .file_name()
         .ok_or("Stdin filepath requires a filename")?;
 
-    let parent =
-        fs::canonicalize(parent).map_err(|error| format!("{}: {error}", parent.display()))?;
+    let parent = fs::canonicalize(parent)
+        .map_err(|error| Failure::from(error).context(&parent.display().to_string()))?;
 
     Ok(parent.join(name))
 }
@@ -142,19 +127,19 @@ fn stdin(
     context: Option<&Path>,
     configuration: &configuration::Configuration,
     reporting: &mut Reporting,
-) -> Result<(), String> {
+) -> Result<(), Failure> {
     let name = context.map_or_else(|| "stdin".into(), |path| path.display().to_string());
 
     reporting.progress(&format!("Checking 1/1  {name}"))?;
 
     let index = reporting.record(name.clone(), Status::Failed);
 
-    let source =
-        io::read_to_string(io::stdin().lock()).map_err(|error| format!("stdin: {error}"))?;
+    let source = io::read_to_string(io::stdin().lock())
+        .map_err(|error| Failure::from(error).context("stdin"))?;
 
     let formatted = language
         .format(&source, configuration)
-        .map_err(|error| format!("stdin: {error}"))?;
+        .map_err(|error| error.context(&name))?;
 
     let changed = source != formatted;
 
