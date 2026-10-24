@@ -1,4 +1,4 @@
 [tools]
-"aqua:axodotdev/cargo-dist" = "latest"
+"aqua:axodotdev/cargo-dist" = "0.33.1"
 "aqua:nushell/nushell" = "latest"
 "aqua:release-plz/release-plz" = "latest"

@@ -9,7 +9,6 @@ def "main plan" []: nothing -> string {
     if $version != $configuration.cargo-dist-version {
         error make {
             msg: $"dist version ($version) does not match ($configuration.cargo-dist-version)"
-
             labels: [
                 {
                     text: "installed version"
@@ -54,22 +53,21 @@ def "main plan" []: nothing -> string {
         []
     }
 
-    dist plan ...$arguments --output-format=json
+    try { dist plan ...$arguments --output-format=json } catch {|failure| exit ($failure.exit_code? | default 1) }
 }
 
 def "main archive" []: nothing -> nothing {
-    let manifest = dist build --artifacts=local --target $env.TARGET --tag $env.GITHUB_REF_NAME --output-format=json | from json
-    $manifest | to json | save --force dist-manifest.json
+    let manifest = try { dist build --artifacts=local --target $env.TARGET --tag $env.GITHUB_REF_NAME --output-format=json } catch {|failure| exit ($failure.exit_code? | default 1) } | from json
     let destination = $"target/distrib/($env.TARGET)-dist-manifest.json"
-    cp dist-manifest.json $destination
+    $manifest | save --force $destination
     let paths = $manifest.upload_files | append $destination | str join (char newline)
     $"paths<<EOF\n($paths)\nEOF\n" | save --append $env.GITHUB_OUTPUT
 }
 
 def "main package" []: nothing -> nothing {
-    dist build --artifacts=global --tag $env.GITHUB_REF_NAME --output-format=json
-    let manifest = dist manifest --artifacts=all --tag $env.GITHUB_REF_NAME --output-format=json | from json
-    $manifest | to json | save --force dist-manifest.json
+    try { dist build --artifacts=global --tag $env.GITHUB_REF_NAME --output-format=json } catch {|failure| exit ($failure.exit_code? | default 1) }
+
+    try { dist manifest --artifacts=all --tag $env.GITHUB_REF_NAME --output-format=json } catch {|failure| exit ($failure.exit_code? | default 1) } | from json | save --force dist-manifest.json
 }
 
 def "main publish" []: nothing -> string {
@@ -83,5 +81,5 @@ def "main publish" []: nothing -> string {
         []
     }
 
-    gh release create $env.GITHUB_REF_NAME --verify-tag --title $env.GITHUB_REF_NAME --notes-file $notes ...$arguments ...$manifest.upload_files
+    try { gh release create $env.GITHUB_REF_NAME --verify-tag --title $env.GITHUB_REF_NAME --notes-file $notes ...$arguments ...$manifest.upload_files } catch {|failure| exit ($failure.exit_code? | default 1) }
 }
