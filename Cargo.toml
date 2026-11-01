@@ -42,7 +42,7 @@ tree-sitter-nu = { git = "https://github.com/nushell/tree-sitter-nu", rev = "4f5
 tree-sitter-pwsh = "0.38"
 tree-sitter-python = "0.25"
 tree-sitter-typescript = "0.23"
-vermis = "0.7"
+vermis = "0.8"
 
 [dev-dependencies]
 datatest-stable = "0.3"

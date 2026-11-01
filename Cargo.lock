@@ -1434,9 +1434,9 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "vermis"
-version = "0.7.1"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47c9d5fb3db44786132fbea51c9713a30e897904cf6a0277083541621c8462cc"
+checksum = "e20a17fa295cb539ca58aeedc33041b341e8c36ce3b3852e0428df15ff19c688"
 
 [[package]]
 name = "walkdir"
