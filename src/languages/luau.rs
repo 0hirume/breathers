@@ -113,8 +113,10 @@ pub(crate) fn breathe(source: &str, rules: &Rules) -> Result<String, Failure> {
     let mut insertions = BTreeSet::new();
 
     for (index, node) in tree.nodes.iter().enumerate() {
-        let NodeKind::Block { statements } = &node.kind else {
-            continue;
+        let statements = match &node.kind {
+            NodeKind::Block { statements } => statements,
+            NodeKind::Table { fields, .. } => fields,
+            _ => continue,
         };
 
         let module = matches!(top, NodeKind::Root { block, .. } if block.get() == index);
@@ -347,6 +349,10 @@ fn require<'source>(
 }
 
 fn complex(node: NodeIndex, tree: &Tree<'_>, source: &str, rules: &Rules) -> bool {
+    if matches!(tree.node(node).kind, NodeKind::TableField { .. }) {
+        return rules.enabled(Rule::Tables) && multiline(node, tree, source);
+    }
+
     if let Some(rule) = block(node, tree) {
         return rules.enabled(rule);
     }
