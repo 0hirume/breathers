@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.7](https://github.com/0hirume/breathers/compare/v0.6.6...v0.6.7) - 2026-11-23
+
+### Other
+
+- **release:** version chore commits
+- **deps:** update vermis to 0.9
+
 ## [0.6.6](https://github.com/0hirume/breathers/compare/v0.6.5...v0.6.6) - 2026-11-13
 
 ### Added
